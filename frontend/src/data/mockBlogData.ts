@@ -1,0 +1,135 @@
+
+import { BlogPost } from '@/types/blog';
+
+export const mockBlogPosts: BlogPost[] = [
+  {
+    id: '1',
+    title: '10 Strategii esențiale pentru a obține nota 10 la Bacalaureat',
+    excerpt: 'Descoperă metodele de studiu eficiente recomandate de profesori cu experiență care te vor ajuta să obții rezultate excelente.',
+    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Prof. Maria Popescu',
+    authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '15 aprilie 2024',
+    readTime: 8,
+    categories: ['Sfaturi de învățare', 'Pregătire Bac'],
+    comments: 24,
+    likes: 156
+  },
+  {
+    id: '2',
+    title: 'Cum să înveți eficient pentru examenul de Matematică',
+    excerpt: 'Ghid complet cu tehnici de învățare specifice pentru matematică, incluzând cum să abordezi diferite tipuri de probleme.',
+    image: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Prof. Andrei Dumitrescu',
+    authorAvatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '2 aprilie 2024',
+    readTime: 10,
+    categories: ['Matematică', 'Tehnici de studiu'],
+    comments: 18,
+    likes: 132
+  },
+  {
+    id: '3',
+    title: 'Greșelile frecvente la examenul de Limba Română și cum să le eviți',
+    excerpt: 'Analiză detaliată a celor mai comune greșeli la proba de română și sfaturi practice pentru a le evita.',
+    image: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Prof. Elena Ionescu',
+    authorAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '25 martie 2024',
+    readTime: 7,
+    categories: ['Limba Română', 'Pregătire Bac'],
+    comments: 31,
+    likes: 184
+  },
+  {
+    id: '4',
+    title: 'Planificarea timpului în perioada de pregătire pentru Bacalaureat',
+    excerpt: 'Cum să-ți organizezi eficient programul de studiu în lunile premergătoare examenului pentru rezultate optime.',
+    image: 'https://images.unsplash.com/photo-1506784365847-bbad939e9335?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Prof. Alexandru Popa',
+    authorAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '18 martie 2024',
+    readTime: 6,
+    categories: ['Managementul timpului', 'Sfaturi de învățare'],
+    comments: 14,
+    likes: 98
+  },
+  {
+    id: '5',
+    title: 'Cum să faci față anxietății în timpul examenelor',
+    excerpt: 'Tehnici psihologice și exerciții practice pentru gestionarea emoțiilor și reducerea stresului înainte și în timpul examenului.',
+    image: 'https://images.unsplash.com/photo-1490131784822-b4626a8ec96a?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Dr. Mihaela Stan',
+    authorAvatar: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '10 martie 2024',
+    readTime: 9,
+    categories: ['Sănătate mentală', 'Gestionarea stresului'],
+    comments: 42,
+    likes: 215
+  },
+  {
+    id: '6',
+    title: 'Importanța alimentației și a somnului în perioada de pregătire',
+    excerpt: 'Cum influențează dieta și odihna performanțele cognitive și ce poți face pentru a-ți optimiza stilul de viață.',
+    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Dr. Cristina Dragomir',
+    authorAvatar: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '5 martie 2024',
+    readTime: 7,
+    categories: ['Sănătate', 'Stil de viață'],
+    comments: 19,
+    likes: 127
+  },
+  {
+    id: '7',
+    title: 'Resurse online gratuite pentru pregătirea Bacalaureatului',
+    excerpt: 'O colecție cuprinzătoare de site-uri, videoclipuri și materiale digitale care te pot ajuta să te pregătești fără costuri.',
+    image: 'https://images.unsplash.com/photo-1453906971074-ce568cccbc63?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Prof. Radu Gheorghe',
+    authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '28 februarie 2024',
+    readTime: 5,
+    categories: ['Resurse educaționale', 'Învățare online'],
+    comments: 27,
+    likes: 173
+  },
+  {
+    id: '8',
+    title: 'Cum să te pregătești pentru proba orală la Bacalaureat',
+    excerpt: 'Strategii pentru a-ți îmbunătăți abilitățile de comunicare și sfaturi pentru a face față emoțiilor în timpul probei orale.',
+    image: 'https://images.unsplash.com/photo-1559523161-0fc0d8b38a7a?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Prof. Diana Munteanu',
+    authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '20 februarie 2024',
+    readTime: 8,
+    categories: ['Comunicare', 'Proba orală'],
+    comments: 16,
+    likes: 112
+  },
+  {
+    id: '9',
+    title: 'Modele de subiecte rezolvate pentru Bacalaureat 2024',
+    excerpt: 'Analiză detaliată a modelelor oficiale și exemple de rezolvări pentru toate materiile de examen.',
+    image: 'https://images.unsplash.com/photo-1434626881859-194d67b2b86f?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Prof. Marian Vasilescu',
+    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '15 februarie 2024',
+    readTime: 12,
+    categories: ['Modele și rezolvări', 'Pregătire Bac'],
+    comments: 38,
+    likes: 204
+  },
+  {
+    id: '10',
+    title: 'Cum să faci tranziția de la liceu la facultate: sfaturi pentru viitorii studenți',
+    excerpt: 'Pregătește-te pentru viața universitară cu aceste sfaturi practice de la studenți și consilieri educaționali.',
+    image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    author: 'Ana Preda',
+    authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    date: '8 februarie 2024',
+    readTime: 6,
+    categories: ['Admitere facultate', 'Dezvoltare personală'],
+    comments: 29,
+    likes: 167
+  }
+];
