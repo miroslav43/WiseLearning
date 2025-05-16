@@ -1,3 +1,73 @@
+/**
+ * Course model defining course structure for the platform
+ */
+export interface Course {
+  id: string;
+  title: string;
+  description: string;
+  subject: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  price: number;
+  currency: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  durationHours: number;
+  teacherId: string;
+  teacherName: string;
+  rating?: number;
+  reviewCount?: number;
+  status: 'draft' | 'published' | 'archived' | 'removed';
+  featured?: boolean;
+  enrolledCount?: number;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  lessons?: Lesson[];
+}
+
+/**
+ * Form data for creating or updating a course
+ */
+export interface CourseFormData {
+  id?: string;
+  title: string;
+  description: string;
+  subject: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  price: number;
+  currency: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  durationHours: number;
+}
+
+/**
+ * Lesson model for course content
+ */
+export interface Lesson {
+  id: string;
+  title: string;
+  description?: string;
+  content?: string;
+  videoUrl?: string;
+  order: number;
+  durationMinutes: number;
+  courseId: string;
+  completed?: boolean;
+}
+
+/**
+ * Enrollment status for a student in a course
+ */
+export interface CourseEnrollment {
+  id: string;
+  courseId: string;
+  course?: Course;
+  studentId: string;
+  status: 'active' | 'completed' | 'paused' | 'refunded';
+  progressPercentage: number;
+  enrolledAt: Date | string;
+  completedAt?: Date | string;
+}
 
 export type Subject =
   | 'computer-science'
@@ -64,59 +134,10 @@ export interface Assignment {
 
 export type ContentType = 'lesson' | 'quiz' | 'assignment';
 
-export interface Lesson {
-  id: string;
-  title: string;
-  description: string;
-  videoUrl?: string;
-  content?: string;
-  duration: number; // in minutes
-  order: number;
-  type: ContentType;
-  quiz?: Quiz;
-  assignment?: Assignment;
-}
-
 export interface Topic {
   id: string;
   title: string;
   description: string;
   lessons: Lesson[];
   order: number;
-}
-
-export interface Course {
-  id: string;
-  title: string;
-  description: string;
-  subject: Subject;
-  image: string;
-  price: number;
-  pointsPrice: number; // New field for points-based pricing
-  teacherId: string;
-  teacherName: string;
-  teacherAvatar?: string;
-  topics: Topic[];
-  students: number;
-  rating: number;
-  reviews: Review[];
-  status: 'draft' | 'published' | 'archived' | 'rejected';
-  featured: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CourseFormData {
-  title: string;
-  description: string;
-  subject: Subject;
-  image: string;
-  price: number;
-  topics: {
-    id: string;
-    title: string;
-    description: string;
-    lessons: Lesson[];
-    order: number;
-  }[];
 }

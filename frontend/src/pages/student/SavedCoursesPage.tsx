@@ -1,14 +1,13 @@
-
-import React, { useEffect, useState } from 'react';
-import { useSavedCourses } from '@/contexts/SavedCoursesContext';
-import { useAuth } from '@/contexts/AuthContext';
-import CourseCard from '@/components/courses/CourseCard';
-import { Course } from '@/types/course';
-import { mockCourses } from '@/data/mockData';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bookmark, Heart } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import CourseCard from "@/components/courses/CourseCard";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSavedCourses } from "@/contexts/SavedCoursesContext";
+import { fetchCourse } from "@/services/courseService";
+import { Course } from "@/types/course";
+import { Bookmark, Heart } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const SavedCoursesPage: React.FC = () => {
   const { savedCourses, likedCourses } = useSavedCourses();
@@ -16,20 +15,49 @@ const SavedCoursesPage: React.FC = () => {
   const navigate = useNavigate();
   const [savedCoursesList, setSavedCoursesList] = useState<Course[]>([]);
   const [likedCoursesList, setLikedCoursesList] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
 
-    // In a real app, this would be an API call
-    const fetchSavedCourses = () => {
-      const saved = mockCourses.filter(course => savedCourses.includes(course.id));
-      const liked = mockCourses.filter(course => likedCourses.includes(course.id));
-      
-      setSavedCoursesList(saved);
-      setLikedCoursesList(liked);
+    const fetchSavedCourses = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Fetch saved courses
+        const savedPromises = savedCourses.map((id) => fetchCourse(id));
+        const savedResults = await Promise.allSettled(savedPromises);
+        const savedCoursesData = savedResults
+          .filter(
+            (result): result is PromiseFulfilledResult<Course> =>
+              result.status === "fulfilled"
+          )
+          .map((result) => result.value);
+        setSavedCoursesList(savedCoursesData);
+
+        // Fetch liked courses
+        const likedPromises = likedCourses.map((id) => fetchCourse(id));
+        const likedResults = await Promise.allSettled(likedPromises);
+        const likedCoursesData = likedResults
+          .filter(
+            (result): result is PromiseFulfilledResult<Course> =>
+              result.status === "fulfilled"
+          )
+          .map((result) => result.value);
+        setLikedCoursesList(likedCoursesData);
+      } catch (err) {
+        console.error("Failed to fetch saved courses:", err);
+        setError(
+          "Nu am putut încărca cursurile salvate. Te rugăm să încerci din nou."
+        );
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchSavedCourses();
@@ -38,7 +66,7 @@ const SavedCoursesPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Cursurile mele salvate</h1>
-      
+
       <Tabs defaultValue="saved" className="mb-8">
         <TabsList className="mb-4">
           <TabsTrigger value="saved" className="flex items-center gap-2">
@@ -50,11 +78,11 @@ const SavedCoursesPage: React.FC = () => {
             Cursuri apreciate ({likedCoursesList.length})
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="saved">
           {savedCoursesList.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {savedCoursesList.map(course => (
+              {savedCoursesList.map((course) => (
                 <CourseCard key={course.id} course={course} />
               ))}
             </div>
@@ -63,19 +91,20 @@ const SavedCoursesPage: React.FC = () => {
               <Bookmark className="h-16 w-16 mx-auto text-gray-300" />
               <h3 className="text-xl font-semibold">Nu ai cursuri salvate</h3>
               <p className="text-gray-500 max-w-md mx-auto">
-                Salvează cursurile care te interesează pentru a le accesa mai ușor mai târziu.
+                Salvează cursurile care te interesează pentru a le accesa mai
+                ușor mai târziu.
               </p>
-              <Button onClick={() => navigate('/courses')} className="mt-4">
+              <Button onClick={() => navigate("/courses")} className="mt-4">
                 Explorează cursuri
               </Button>
             </div>
           )}
         </TabsContent>
-        
+
         <TabsContent value="liked">
           {likedCoursesList.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {likedCoursesList.map(course => (
+              {likedCoursesList.map((course) => (
                 <CourseCard key={course.id} course={course} />
               ))}
             </div>
@@ -84,9 +113,10 @@ const SavedCoursesPage: React.FC = () => {
               <Heart className="h-16 w-16 mx-auto text-gray-300" />
               <h3 className="text-xl font-semibold">Nu ai cursuri apreciate</h3>
               <p className="text-gray-500 max-w-md mx-auto">
-                Apreciază cursurile care ți-au plăcut pentru a le accesa mai ușor mai târziu.
+                Apreciază cursurile care ți-au plăcut pentru a le accesa mai
+                ușor mai târziu.
               </p>
-              <Button onClick={() => navigate('/courses')} className="mt-4">
+              <Button onClick={() => navigate("/courses")} className="mt-4">
                 Explorează cursuri
               </Button>
             </div>

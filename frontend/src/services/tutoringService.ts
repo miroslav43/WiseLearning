@@ -1,474 +1,310 @@
-import { v4 as uuidv4 } from 'uuid';
-import { 
-  TutoringSession, 
-  TutoringRequest, 
-  TutoringMessage,
-  TutoringSessionStatus,
-  TutoringRequestStatus,
-  TutoringReview
-} from '@/types/tutoring';
-import { 
-  mockTutoringSessions, 
-  mockTutoringRequests, 
-  mockTutoringMessages 
-} from '@/data/mockTutoringData';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { createTutoringConversation } from '@/services/messagingService';
-
-// Mock storage in localStorage
-const STORAGE_KEYS = {
-  TUTORING_SESSIONS: 'wiselearning_tutoring_sessions',
-  TUTORING_REQUESTS: 'wiselearning_tutoring_requests',
-  TUTORING_MESSAGES: 'wiselearning_tutoring_messages',
-  TUTORING_REVIEWS: 'wiselearning_tutoring_reviews'
-};
-
-// Initialize local storage with mock data if empty
-const initializeStorage = () => {
-  if (!localStorage.getItem(STORAGE_KEYS.TUTORING_SESSIONS)) {
-    localStorage.setItem(STORAGE_KEYS.TUTORING_SESSIONS, JSON.stringify(mockTutoringSessions));
-  }
-  
-  if (!localStorage.getItem(STORAGE_KEYS.TUTORING_REQUESTS)) {
-    localStorage.setItem(STORAGE_KEYS.TUTORING_REQUESTS, JSON.stringify(mockTutoringRequests));
-  }
-  
-  if (!localStorage.getItem(STORAGE_KEYS.TUTORING_MESSAGES)) {
-    localStorage.setItem(STORAGE_KEYS.TUTORING_MESSAGES, JSON.stringify(mockTutoringMessages));
-  }
-};
+import {
+  TutoringMessage,
+  TutoringRequest,
+  TutoringRequestStatus,
+  TutoringReview,
+  TutoringSession,
+  TutoringSessionStatus
+} from '@/types/tutoring';
+import { apiClient } from '@/utils/apiClient';
 
 // Get all tutoring sessions
-export const getAllTutoringSessions = (): TutoringSession[] => {
-  initializeStorage();
-  const sessions = localStorage.getItem(STORAGE_KEYS.TUTORING_SESSIONS);
-  return sessions ? JSON.parse(sessions) : [];
+export const getAllTutoringSessions = async () => {
+  return apiClient.get<TutoringSession[]>('/tutoring/sessions');
 };
 
 // Get approved tutoring sessions
-export const getApprovedTutoringSessions = (): TutoringSession[] => {
-  return getAllTutoringSessions().filter(session => session.status === 'approved');
+export const getApprovedTutoringSessions = async () => {
+  return apiClient.get<TutoringSession[]>('/tutoring/sessions', { status: 'approved' });
 };
 
 // Get tutoring sessions by teacher ID
-export const getTeacherTutoringSessions = (teacherId: string): TutoringSession[] => {
-  return getAllTutoringSessions().filter(session => session.teacherId === teacherId);
+export const getTeacherTutoringSessions = async (teacherId: string) => {
+  return apiClient.get<TutoringSession[]>(`/tutoring/sessions/teacher/${teacherId}`);
 };
 
 // Get a specific tutoring session
-export const getTutoringSessionById = (sessionId: string): TutoringSession | undefined => {
-  const session = getAllTutoringSessions().find(session => session.id === sessionId);
-  
-  if (session) {
-    // Fetch reviews for this session
-    const reviews = getTutoringReviewsBySessionId(sessionId);
-    
-    // Calculate average rating
-    let rating = 0;
-    if (reviews.length > 0) {
-      const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
-      rating = sum / reviews.length;
-    }
-    
-    return {
-      ...session,
-      reviews,
-      rating
-    };
-  }
-  
-  return session;
+export const getTutoringSessionById = async (sessionId: string) => {
+  return apiClient.get<TutoringSession>(`/tutoring/sessions/${sessionId}`);
 };
 
 // Create a new tutoring session
-export const createTutoringSession = (
+export const createTutoringSession = async (
   session: Omit<TutoringSession, 'id' | 'status' | 'createdAt' | 'updatedAt'>
-): TutoringSession => {
-  const newSession: TutoringSession = {
-    ...session,
-    id: uuidv4(),
-    status: 'pending',
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
-  const sessions = getAllTutoringSessions();
-  const updatedSessions = [...sessions, newSession];
-  localStorage.setItem(STORAGE_KEYS.TUTORING_SESSIONS, JSON.stringify(updatedSessions));
-  
-  return newSession;
+) => {
+  return apiClient.post<TutoringSession>('/tutoring/sessions', session);
 };
 
 // Update a tutoring session
-export const updateTutoringSession = (
+export const updateTutoringSession = async (
   sessionId: string, 
   updates: Partial<TutoringSession>
-): TutoringSession | undefined => {
-  const sessions = getAllTutoringSessions();
-  const sessionIndex = sessions.findIndex(session => session.id === sessionId);
-  
-  if (sessionIndex === -1) return undefined;
-  
-  const updatedSession = {
-    ...sessions[sessionIndex],
-    ...updates,
-    updatedAt: new Date()
-  };
-  
-  sessions[sessionIndex] = updatedSession;
-  localStorage.setItem(STORAGE_KEYS.TUTORING_SESSIONS, JSON.stringify(sessions));
-  
-  return updatedSession;
+) => {
+  return apiClient.put<TutoringSession>(`/tutoring/sessions/${sessionId}`, updates);
 };
 
 // Update tutoring session status
-export const updateTutoringSessionStatus = (
+export const updateTutoringSessionStatus = async (
   sessionId: string, 
   status: TutoringSessionStatus
-): TutoringSession | undefined => {
-  return updateTutoringSession(sessionId, { status });
+) => {
+  return apiClient.patch<TutoringSession>(`/tutoring/sessions/${sessionId}/status`, { status });
 };
 
 // Delete a tutoring session
-export const deleteTutoringSession = (sessionId: string): boolean => {
-  const sessions = getAllTutoringSessions();
-  const filteredSessions = sessions.filter(session => session.id !== sessionId);
-  
-  if (filteredSessions.length === sessions.length) return false;
-  
-  localStorage.setItem(STORAGE_KEYS.TUTORING_SESSIONS, JSON.stringify(filteredSessions));
-  
-  // Clean up related requests and messages
-  const requests = getAllTutoringRequests();
-  const sessionRequests = requests.filter(request => request.sessionId === sessionId);
-  
-  sessionRequests.forEach(request => {
-    deleteTutoringRequest(request.id);
-  });
-  
-  return true;
+export const deleteTutoringSession = async (sessionId: string) => {
+  return apiClient.delete<{ message: string }>(`/tutoring/sessions/${sessionId}`);
 };
 
 // Get all tutoring requests
-export const getAllTutoringRequests = (): TutoringRequest[] => {
-  initializeStorage();
-  const requests = localStorage.getItem(STORAGE_KEYS.TUTORING_REQUESTS);
-  return requests ? JSON.parse(requests) : [];
+export const getAllTutoringRequests = async () => {
+  return apiClient.get<TutoringRequest[]>('/tutoring/requests');
 };
 
 // Get tutoring requests by session ID
-export const getTutoringRequestsBySessionId = (sessionId: string): TutoringRequest[] => {
-  return getAllTutoringRequests().filter(request => request.sessionId === sessionId);
+export const getTutoringRequestsBySessionId = async (sessionId: string) => {
+  return apiClient.get<TutoringRequest[]>(`/tutoring/sessions/${sessionId}/requests`);
 };
 
 // Get tutoring requests by student ID
-export const getTutoringRequestsByStudentId = (studentId: string): TutoringRequest[] => {
-  return getAllTutoringRequests().filter(request => request.studentId === studentId);
+export const getTutoringRequestsByStudentId = async (studentId: string) => {
+  return apiClient.get<TutoringRequest[]>(`/tutoring/requests/student/${studentId}`);
+};
+
+// Get my tutoring requests (as a student)
+export const getMyTutoringRequests = async () => {
+  return apiClient.get<TutoringRequest[]>('/tutoring/requests/my');
 };
 
 // Get a specific tutoring request
-export const getTutoringRequestById = (requestId: string): TutoringRequest | undefined => {
-  return getAllTutoringRequests().find(request => request.id === requestId);
+export const getTutoringRequestById = async (requestId: string) => {
+  return apiClient.get<TutoringRequest>(`/tutoring/requests/${requestId}`);
 };
 
 // Create a new tutoring request
-export const createTutoringRequest = (
+export const createTutoringRequest = async (
   request: Omit<TutoringRequest, 'id' | 'status' | 'createdAt' | 'updatedAt'>
-): TutoringRequest => {
-  const newRequest: TutoringRequest = {
-    ...request,
-    id: uuidv4(),
-    status: 'pending',
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
-  const requests = getAllTutoringRequests();
-  const updatedRequests = [...requests, newRequest];
-  localStorage.setItem(STORAGE_KEYS.TUTORING_REQUESTS, JSON.stringify(updatedRequests));
-  
-  // Create a messaging conversation between student and teacher
-  const session = getTutoringSessionById(request.sessionId);
-  if (session) {
-    createTutoringConversation(
-      request.studentId,
-      session.teacherId,
-      request.studentName,
-      session.subject
-    );
-  }
-  
-  return newRequest;
+) => {
+  return apiClient.post<TutoringRequest>('/tutoring/requests', request);
 };
 
 // Update tutoring request status
-export const updateTutoringRequestStatus = (
+export const updateTutoringRequestStatus = async (
   requestId: string, 
   status: TutoringRequestStatus
-): TutoringRequest | undefined => {
-  const requests = getAllTutoringRequests();
-  const requestIndex = requests.findIndex(request => request.id === requestId);
-  
-  if (requestIndex === -1) return undefined;
-  
-  const updatedRequest = {
-    ...requests[requestIndex],
-    status,
-    updatedAt: new Date()
-  };
-  
-  requests[requestIndex] = updatedRequest;
-  localStorage.setItem(STORAGE_KEYS.TUTORING_REQUESTS, JSON.stringify(requests));
-  
-  return updatedRequest;
+) => {
+  return apiClient.patch<TutoringRequest>(`/tutoring/requests/${requestId}/status`, { status });
 };
 
 // Delete a tutoring request
-export const deleteTutoringRequest = (requestId: string): boolean => {
-  const requests = getAllTutoringRequests();
-  const filteredRequests = requests.filter(request => request.id !== requestId);
-  
-  if (filteredRequests.length === requests.length) return false;
-  
-  localStorage.setItem(STORAGE_KEYS.TUTORING_REQUESTS, JSON.stringify(filteredRequests));
-  
-  // Clean up related messages
-  const messages = getAllTutoringMessages();
-  const filteredMessages = messages.filter(message => message.requestId !== requestId);
-  localStorage.setItem(STORAGE_KEYS.TUTORING_MESSAGES, JSON.stringify(filteredMessages));
-  
-  return true;
+export const deleteTutoringRequest = async (requestId: string) => {
+  return apiClient.delete<{ message: string }>(`/tutoring/requests/${requestId}`);
 };
 
 // Get all tutoring messages
-export const getAllTutoringMessages = (): TutoringMessage[] => {
-  initializeStorage();
-  const messages = localStorage.getItem(STORAGE_KEYS.TUTORING_MESSAGES);
-  return messages ? JSON.parse(messages) : [];
+export const getAllTutoringMessages = async () => {
+  return apiClient.get<TutoringMessage[]>('/tutoring/messages');
 };
 
 // Get tutoring messages by request ID
-export const getTutoringMessagesByRequestId = (requestId: string): TutoringMessage[] => {
-  return getAllTutoringMessages()
-    .filter(message => message.requestId === requestId)
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+export const getTutoringMessagesByRequestId = async (requestId: string) => {
+  return apiClient.get<TutoringMessage[]>(`/tutoring/requests/${requestId}/messages`);
 };
 
 // Create a new tutoring message
-export const createTutoringMessage = (
+export const createTutoringMessage = async (
   message: Omit<TutoringMessage, 'id' | 'read' | 'createdAt'>
-): TutoringMessage => {
-  const newMessage: TutoringMessage = {
-    ...message,
-    id: uuidv4(),
-    read: false,
-    createdAt: new Date()
-  };
-  
-  const messages = getAllTutoringMessages();
-  const updatedMessages = [...messages, newMessage];
-  localStorage.setItem(STORAGE_KEYS.TUTORING_MESSAGES, JSON.stringify(updatedMessages));
-  
-  return newMessage;
+) => {
+  return apiClient.post<TutoringMessage>(`/tutoring/requests/${message.requestId}/messages`, message);
 };
 
 // Mark all messages in a request as read
-export const markRequestMessagesAsRead = (requestId: string, userId: string): boolean => {
-  const messages = getAllTutoringMessages();
-  let updated = false;
-  
-  const updatedMessages = messages.map(message => {
-    if (message.requestId === requestId && message.senderId !== userId && !message.read) {
-      updated = true;
-      return { ...message, read: true };
-    }
-    return message;
-  });
-  
-  if (updated) {
-    localStorage.setItem(STORAGE_KEYS.TUTORING_MESSAGES, JSON.stringify(updatedMessages));
-  }
-  
-  return updated;
+export const markRequestMessagesAsRead = async (requestId: string) => {
+  return apiClient.patch<{ message: string }>(`/tutoring/requests/${requestId}/messages/read`);
 };
 
 // Get unread message count for a user
-export const getUnreadMessageCount = (userId: string): number => {
-  return getAllTutoringMessages().filter(
-    message => message.senderId !== userId && !message.read
-  ).length;
+export const getUnreadMessageCount = async () => {
+  return apiClient.get<{ count: number }>('/tutoring/messages/unread');
 };
 
 // Get tutoring reviews by session ID
-export const getTutoringReviewsBySessionId = (sessionId: string): TutoringReview[] => {
-  initializeStorage();
-  const REVIEWS_KEY = 'wiselearning_tutoring_reviews';
-  const reviews = localStorage.getItem(REVIEWS_KEY);
-  return reviews ? 
-    JSON.parse(reviews).filter((review: TutoringReview) => review.sessionId === sessionId) : 
-    [];
+export const getTutoringReviewsBySessionId = async (sessionId: string) => {
+  return apiClient.get<TutoringReview[]>(`/tutoring/sessions/${sessionId}/reviews`);
 };
 
 // Add a tutoring review
-export const addTutoringReview = (review: Omit<TutoringReview, 'id' | 'createdAt'>): TutoringReview => {
-  initializeStorage();
-  const REVIEWS_KEY = 'wiselearning_tutoring_reviews';
-
-  // Check if the user has already reviewed this session
-  const existingReviews = getTutoringReviewsBySessionId(review.sessionId);
-  const hasReviewed = existingReviews.some(r => r.studentId === review.studentId);
-  
-  if (hasReviewed) {
-    throw new Error('You have already reviewed this tutoring session');
-  }
-
-  const newReview: TutoringReview = {
-    ...review,
-    id: uuidv4(),
-    createdAt: new Date()
-  };
-
-  const reviews = localStorage.getItem(REVIEWS_KEY);
-  const parsedReviews = reviews ? JSON.parse(reviews) : [];
-  const updatedReviews = [...parsedReviews, newReview];
-  
-  localStorage.setItem(REVIEWS_KEY, JSON.stringify(updatedReviews));
-  return newReview;
+export const addTutoringReview = async (review: Omit<TutoringReview, 'id' | 'createdAt'>) => {
+  return apiClient.post<TutoringReview>('/tutoring/reviews', review);
 };
 
 // Delete a tutoring review
-export const deleteTutoringReview = (reviewId: string): boolean => {
-  initializeStorage();
-  const REVIEWS_KEY = 'wiselearning_tutoring_reviews';
-  
-  const reviews = localStorage.getItem(REVIEWS_KEY);
-  if (!reviews) return false;
-  
-  const parsedReviews = JSON.parse(reviews);
-  const updatedReviews = parsedReviews.filter((review: TutoringReview) => review.id !== reviewId);
-  
-  if (updatedReviews.length === parsedReviews.length) {
-    return false;
-  }
-  
-  localStorage.setItem(REVIEWS_KEY, JSON.stringify(updatedReviews));
-  return true;
+export const deleteTutoringReview = async (reviewId: string) => {
+  return apiClient.delete<{ message: string }>(`/tutoring/reviews/${reviewId}`);
 };
 
 // Custom hook for using the tutoring service with notifications
 export const useTutoringService = () => {
   const { addNotification } = useNotifications();
   
-  const createSessionWithNotification = (
+  const createSessionWithNotification = async (
     session: Omit<TutoringSession, 'id' | 'status' | 'createdAt' | 'updatedAt'>
   ) => {
-    const newSession = createTutoringSession(session);
-    
-    addNotification({
-      title: 'Sesiune de tutoriat creată',
-      message: 'Sesiunea de tutoriat a fost creată și așteaptă aprobarea.',
-      type: 'info'
-    });
-    
-    return newSession;
+    try {
+      const newSession = await createTutoringSession(session);
+      
+      addNotification({
+        title: 'Sesiune de tutoriat creată',
+        message: 'Sesiunea de tutoriat a fost creată și așteaptă aprobarea.',
+        type: 'info'
+      });
+      
+      return newSession;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'A apărut o eroare la crearea sesiunii';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
+    }
   };
   
-  const approveSessionWithNotification = (sessionId: string) => {
-    const session = updateTutoringSessionStatus(sessionId, 'approved');
-    
-    if (session) {
+  const approveSessionWithNotification = async (sessionId: string) => {
+    try {
+      const session = await updateTutoringSessionStatus(sessionId, 'approved');
+      
       addNotification({
         title: 'Sesiune aprobată',
         message: `Sesiunea "${session.subject}" a fost aprobată și este acum vizibilă pentru studenți.`,
         type: 'success'
       });
+      
+      return session;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'A apărut o eroare la aprobarea sesiunii';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
     }
-    
-    return session;
   };
   
-  const rejectSessionWithNotification = (sessionId: string) => {
-    const session = updateTutoringSessionStatus(sessionId, 'rejected');
-    
-    if (session) {
+  const rejectSessionWithNotification = async (sessionId: string) => {
+    try {
+      const session = await updateTutoringSessionStatus(sessionId, 'rejected');
+      
       addNotification({
         title: 'Sesiune respinsă',
-        message: `Sesiunea "${session.subject}" a fost respinsă.`,
+        message: `Sesiunea a fost respinsă.`,
         type: 'warning'
       });
+      
+      return session;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'A apărut o eroare la respingerea sesiunii';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
     }
-    
-    return session;
   };
   
-  const createRequestWithNotification = (
+  const createRequestWithNotification = async (
     request: Omit<TutoringRequest, 'id' | 'status' | 'createdAt' | 'updatedAt'>
   ) => {
-    const newRequest = createTutoringRequest(request);
-    const session = getTutoringSessionById(request.sessionId);
-    
-    if (session) {
+    try {
+      const newRequest = await createTutoringRequest(request);
+      
       addNotification({
         title: 'Cerere de tutoriat trimisă',
-        message: `Cererea ta pentru "${session.subject}" a fost trimisă profesorului. Verifică mesajele pentru a continua conversația.`,
+        message: 'Cererea ta a fost trimisă profesorului. Verifică mesajele pentru a continua conversația.',
         type: 'info'
       });
+      
+      return newRequest;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'A apărut o eroare la trimiterea cererii';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
     }
-    
-    return newRequest;
   };
   
-  const acceptRequestWithNotification = (requestId: string) => {
-    const request = updateTutoringRequestStatus(requestId, 'accepted');
-    
-    if (request) {
-      const session = getTutoringSessionById(request.sessionId);
-      if (session) {
-        addNotification({
-          title: 'Cerere acceptată',
-          message: `Cererea pentru "${session.subject}" a fost acceptată.`,
-          type: 'success'
-        });
-      }
+  const acceptRequestWithNotification = async (requestId: string) => {
+    try {
+      const request = await updateTutoringRequestStatus(requestId, 'accepted');
+      
+      addNotification({
+        title: 'Cerere acceptată',
+        message: 'Cererea de tutoriat a fost acceptată.',
+        type: 'success'
+      });
+      
+      return request;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'A apărut o eroare la acceptarea cererii';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
     }
-    
-    return request;
   };
   
-  const rejectRequestWithNotification = (requestId: string) => {
-    const request = updateTutoringRequestStatus(requestId, 'rejected');
-    
-    if (request) {
-      const session = getTutoringSessionById(request.sessionId);
-      if (session) {
-        addNotification({
-          title: 'Cerere respinsă',
-          message: `Cererea pentru "${session.subject}" a fost respinsă.`,
-          type: 'warning'
-        });
-      }
+  const rejectRequestWithNotification = async (requestId: string) => {
+    try {
+      const request = await updateTutoringRequestStatus(requestId, 'rejected');
+      
+      addNotification({
+        title: 'Cerere respinsă',
+        message: 'Cererea de tutoriat a fost respinsă.',
+        type: 'warning'
+      });
+      
+      return request;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'A apărut o eroare la respingerea cererii';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
     }
-    
-    return request;
   };
   
-  const sendMessageWithNotification = (
+  const sendMessageWithNotification = async (
     message: Omit<TutoringMessage, 'id' | 'read' | 'createdAt'>
   ) => {
-    const newMessage = createTutoringMessage(message);
-    
-    addNotification({
-      title: 'Mesaj nou',
-      message: 'Ai trimis un mesaj nou.',
-      type: 'info'
-    });
-    
-    return newMessage;
+    try {
+      const newMessage = await createTutoringMessage(message);
+      
+      return newMessage;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'A apărut o eroare la trimiterea mesajului';
+      addNotification({
+        title: 'Eroare',
+        message: errorMessage,
+        type: 'error'
+      });
+      throw error;
+    }
   };
   
-  const submitTutoringReview = (review: Omit<TutoringReview, 'id' | 'createdAt'>) => {
+  const submitTutoringReview = async (review: Omit<TutoringReview, 'id' | 'createdAt'>) => {
     try {
-      const newReview = addTutoringReview(review);
+      const newReview = await addTutoringReview(review);
       
       addNotification({
         title: 'Recenzie adăugată',
@@ -478,7 +314,7 @@ export const useTutoringService = () => {
       
       return newReview;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'A apărut o eroare la trimiterea recenziei.';
+      const errorMessage = error instanceof Error ? error.message : 'A apărut o eroare la trimiterea recenziei';
       
       addNotification({
         title: 'Eroare',
@@ -490,26 +326,30 @@ export const useTutoringService = () => {
     }
   };
   
-  const removeTutoringReview = (reviewId: string) => {
-    const success = deleteTutoringReview(reviewId);
-    
-    if (success) {
+  const removeTutoringReview = async (reviewId: string) => {
+    try {
+      await deleteTutoringReview(reviewId);
+      
       addNotification({
         title: 'Recenzie ștearsă',
         message: 'Recenzia a fost ștearsă cu succes.',
         type: 'success'
       });
-    } else {
+      
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'A apărut o eroare la ștergerea recenziei';
+      
       addNotification({
         title: 'Eroare',
-        message: 'Nu s-a putut șterge recenzia.',
+        message: errorMessage,
         type: 'error'
       });
+      
+      throw error;
     }
-    
-    return success;
   };
-
+  
   return {
     // Session methods
     getAllTutoringSessions,

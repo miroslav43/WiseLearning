@@ -11,7 +11,23 @@ export const register = async (req: Request, res: Response) => {
     
     // Input validation
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please provide all required fields' });
+      return res.status(400).json({ message: 'Please provide all required fields: name, email, and password' });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+    
+    // Validate password strength
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+    
+    // Validate role
+    if (!['student', 'teacher', 'admin'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Must be student, teacher, or admin' });
     }
     
     // Check if user already exists
@@ -47,7 +63,10 @@ export const register = async (req: Request, res: Response) => {
         email: true,
         role: true,
         referralCode: true,
-        createdAt: true
+        createdAt: true,
+        avatar: true,
+        bio: true,
+        points: true
       }
     });
     
@@ -78,7 +97,7 @@ export const register = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'Error registering user' });
+    res.status(500).json({ message: 'Error registering user. Please try again later.' });
   }
 };
 
@@ -94,10 +113,7 @@ export const login = async (req: Request, res: Response) => {
     
     // Find user
     const user = await prisma.user.findUnique({ 
-      where: { email },
-      include: {
-        teacherProfile: role => role.equals(Role.teacher)
-      }
+      where: { email }
     });
     
     if (!user) {
@@ -109,6 +125,15 @@ export const login = async (req: Request, res: Response) => {
     
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    // Get additional role-specific data
+    let roleSpecificData = null;
+    
+    if (user.role === 'teacher') {
+      roleSpecificData = await prisma.teacherProfile.findUnique({
+        where: { userId: user.id }
+      });
     }
     
     // Create JWT token
@@ -136,13 +161,13 @@ export const login = async (req: Request, res: Response) => {
         bio: user.bio,
         points: user.points,
         referralCode: user.referralCode,
-        teacherProfile: user.teacherProfile
+        teacherProfile: roleSpecificData
       },
       token
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Error logging in' });
+    res.status(500).json({ message: 'Error logging in. Please try again later.' });
   }
 };
 
@@ -158,7 +183,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        teacherProfile: true,
+        teacherProfile: req.user.role === 'teacher',
         pointsTransactions: {
           orderBy: { createdAt: 'desc' },
           take: 10
@@ -185,7 +210,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
     res.status(200).json(userData);
   } catch (error) {
     console.error('Get current user error:', error);
-    res.status(500).json({ message: 'Error fetching user profile' });
+    res.status(500).json({ message: 'Error fetching user profile. Please try again later.' });
   }
 };
 

@@ -1,60 +1,61 @@
+import { Course, CourseFormData } from '@/types/course';
+import { apiClient } from '@/utils/apiClient';
 
-import { CourseFormData } from '@/types/course';
-import { v4 as uuidv4 } from 'uuid';
-
-// Mock API function that would typically call the backend
+/**
+ * Save a course (create or update)
+ */
 export const saveCourse = async (courseData: CourseFormData & { status: 'draft' | 'published' }) => {
-  // This is a mock implementation
-  console.log('Saving course:', courseData);
-  
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Return a mock response
-  return {
-    id: uuidv4(),
-    ...courseData,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
+  if (courseData.id) {
+    // Update existing course
+    return apiClient.put<Course>(`/courses/${courseData.id}`, courseData);
+  } else {
+    // Create new course
+    return apiClient.post<{ message: string, courseId: string }>('/courses', courseData);
+  }
 };
 
-// Function to fetch a course by ID (mock)
+/**
+ * Fetch a course by ID
+ */
 export const fetchCourse = async (courseId: string) => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Return a mock course
-  return {
-    id: courseId,
-    title: 'Mock Course',
-    description: 'This is a mock course returned from the API',
-    subject: 'computer-science' as const,
-    image: 'https://placehold.co/600x400',
-    price: 299,
-    topics: [],
-    status: 'draft' as const,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
+  return apiClient.get<Course>(`/courses/${courseId}`);
 };
 
-// Function to fetch all courses for a teacher (mock)
+/**
+ * Fetch all published courses with optional filters
+ */
+export const fetchPublishedCourses = async (filters?: {
+  subject?: string;
+  search?: string;
+  featured?: boolean;
+}) => {
+  return apiClient.get<Course[]>('/courses', filters as Record<string, string>);
+};
+
+/**
+ * Fetch courses for a specific teacher
+ */
 export const fetchTeacherCourses = async (teacherId: string) => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Return mock courses
-  return Array(5).fill(null).map((_, index) => ({
-    id: uuidv4(),
-    title: `Mock Course ${index + 1}`,
-    description: 'This is a mock course returned from the API',
-    subject: 'computer-science' as const,
-    image: 'https://placehold.co/600x400',
-    price: 199 + index * 50,
-    topics: [],
-    status: index % 3 === 0 ? 'published' : 'draft' as 'published' | 'draft',
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }));
+  return apiClient.get<Course[]>(`/courses/teacher/${teacherId}`);
+};
+
+/**
+ * Fetch courses created by the current logged-in teacher
+ */
+export const fetchMyCourses = async () => {
+  return apiClient.get<Course[]>('/courses/my/teaching');
+};
+
+/**
+ * Fetch courses enrolled by the current logged-in student
+ */
+export const fetchMyEnrolledCourses = async () => {
+  return apiClient.get<Course[]>('/courses/my/learning');
+};
+
+/**
+ * Delete a course
+ */
+export const deleteCourse = async (courseId: string) => {
+  return apiClient.delete<{ message: string }>(`/courses/${courseId}`);
 };

@@ -1,21 +1,87 @@
-
-export type UserRole = 'student' | 'teacher' | 'admin';
-
+/**
+ * User model for the system
+ */
 export interface User {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  role: UserRole;
-  avatar?: string;
+  role: 'student' | 'teacher' | 'admin';
+  avatarUrl?: string;
   bio?: string;
-  createdAt: Date;
-  points: number;
-  pointsHistory: PointsTransaction[];
-  referralCode?: string;
-  referredBy?: string;
-  achievements: Achievement[];
-  certificates: Certificate[];
+  subjects?: string[];
+  experience?: number | string;  // Allow both number and string for flexibility
+  points?: number;
+  level?: number;
+  achievements?: any[]; // Simplified for this example
+  certificates?: Certificate[] | string[];  // Allow both Certificate[] and string[]
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
+
+/**
+ * Badge/achievement that can be awarded to users
+ */
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  type: 'course' | 'tutoring' | string;
+  category?: string;
+  imageUrl: string;
+}
+
+/**
+ * Certificate awarded to users for course/tutoring completion
+ */
+export interface Certificate {
+  id: string;
+  title: string;
+  description?: string;
+  recipientId: string;
+  recipientName: string;
+  issuerId: string;
+  issuerName: string;
+  courseId?: string;
+  courseName?: string;
+  tutoringId?: string;
+  tutoringSubject?: string;
+  badgeId?: string;
+  badge?: Badge;
+  imageUrl?: string;
+  verificationCode: string;
+  customMessage?: string;
+  issuedAt: Date | string;
+}
+
+/**
+ * Login credentials for authentication
+ */
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+/**
+ * Data required for registration
+ */
+export interface RegistrationData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role: 'student' | 'teacher';
+}
+
+/**
+ * Authentication response from backend
+ */
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
+export type UserRole = 'student' | 'teacher' | 'admin';
 
 export interface PointsTransaction {
   id: string;
@@ -36,32 +102,6 @@ export interface Achievement {
   icon?: string;
   category?: 'learning' | 'community' | 'mastery';
   progress?: number; // 0-100
-}
-
-export interface Certificate {
-  id: string;
-  userId: string;
-  title: string;
-  issueDate: Date;
-  type: 'course' | 'tutoring';
-  courseId?: string;
-  courseName?: string;
-  tutoringId?: string;
-  tutoringSubject?: string;
-  teacherId: string;
-  teacherName: string;
-  customMessage?: string;
-  imageUrl?: string;
-  badgeId: string;
-}
-
-export interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  imageUrl?: string;
-  type: 'course' | 'tutoring' | 'achievement';
-  category?: string;
 }
 
 export interface Student extends User {

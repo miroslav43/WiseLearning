@@ -1,110 +1,113 @@
-
+import { useNotifications } from '@/contexts/NotificationContext';
 import { CalendarEvent } from '@/types/calendar';
-import { v4 as uuidv4 } from 'uuid';
-import { addDays, addHours, setHours, startOfDay, format, isValid } from 'date-fns';
+import { apiClient } from '@/utils/apiClient';
 
-// Mock function to generate calendar events
-export const fetchCalendarEvents = async (
-  userId: string, 
-  startDate: Date, 
-  endDate: Date
-): Promise<CalendarEvent[]> => {
-  // This would typically be an API call to fetch events from the backend
-  // For now, we'll generate mock data
+// Get calendar events for the current user
+export const getCurrentUserEvents = async (startDate?: Date, endDate?: Date) => {
+  const params: Record<string, string> = {};
   
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  const events: CalendarEvent[] = [];
-  
-  // Validate input dates
-  if (!isValid(startDate) || !isValid(endDate)) {
-    console.error('Invalid date range provided to fetchCalendarEvents', { startDate, endDate });
-    return [];
+  if (startDate) {
+    params.startDate = startDate.toISOString();
   }
   
-  // Add some mock course events
-  const courseStartDate = startOfDay(new Date());
-  events.push({
-    id: uuidv4(),
-    title: 'Informatică: Algoritmi',
-    description: 'Curs săptămânal de algoritmi avansați',
-    type: 'course',
-    startTime: setHours(courseStartDate, 10).toISOString(),
-    endTime: setHours(courseStartDate, 12).toISOString(),
-    courseId: '1',
-    lessonId: '101'
-  });
+  if (endDate) {
+    params.endDate = endDate.toISOString();
+  }
   
-  events.push({
-    id: uuidv4(),
-    title: 'Matematică: Analiză',
-    description: 'Sesiune de recapitulare pentru examen',
-    type: 'course',
-    startTime: setHours(addDays(courseStartDate, 2), 14).toISOString(),
-    endTime: setHours(addDays(courseStartDate, 2), 16).toISOString(),
-    courseId: '3',
-    lessonId: '305'
-  });
+  return apiClient.get<CalendarEvent[]>('/calendar/events', params);
+};
+
+// Added for compatibility with existing components
+export const fetchCalendarEvents = getCurrentUserEvents;
+
+// Create a new calendar event
+export const createEvent = async (event: Omit<CalendarEvent, 'id' | 'createdAt'>) => {
+  return apiClient.post<CalendarEvent>('/calendar/events', event);
+};
+
+// Update a calendar event
+export const updateEvent = async (eventId: string, eventData: Partial<CalendarEvent>) => {
+  return apiClient.put<CalendarEvent>(`/calendar/events/${eventId}`, eventData);
+};
+
+// Delete a calendar event
+export const deleteEvent = async (eventId: string) => {
+  return apiClient.delete<{ message: string }>(`/calendar/events/${eventId}`);
+};
+
+// Custom hook for using calendar service with notifications
+export const useCalendarService = () => {
+  const { addNotification } = useNotifications();
   
-  // Add some tutoring sessions
-  const tutoringStartDate = addDays(startOfDay(new Date()), 1);
-  events.push({
-    id: uuidv4(),
-    title: 'Meditație Informatică',
-    description: 'Sesiune one-on-one cu Prof. Maria Popescu',
-    type: 'tutoring',
-    startTime: setHours(tutoringStartDate, 15).toISOString(),
-    endTime: setHours(tutoringStartDate, 16).toISOString(),
-    teacherName: 'Prof. Maria Popescu',
-    location: 'Online (Google Meet)'
-  });
-  
-  events.push({
-    id: uuidv4(),
-    title: 'Meditație Limba Română',
-    description: 'Pregătire pentru eseu argumentativ',
-    type: 'tutoring',
-    startTime: setHours(addDays(tutoringStartDate, 3), 17).toISOString(),
-    endTime: setHours(addDays(tutoringStartDate, 3), 18).toISOString(),
-    teacherName: 'Prof. Ion Ionescu',
-    location: 'Online (Zoom)'
-  });
-  
-  // Add some assignment deadlines
-  const assignmentDate = addDays(startOfDay(new Date()), 4);
-  events.push({
-    id: uuidv4(),
-    title: 'Algoritmi grafuri - tema 3',
-    description: 'Termen limită pentru implementarea algoritmilor de parcurgere',
-    type: 'assignment',
-    startTime: startOfDay(assignmentDate).toISOString(),
-    endTime: setHours(assignmentDate, 23).toISOString(),
-    courseId: '1'
-  });
-  
-  events.push({
-    id: uuidv4(),
-    title: 'Eseul argumentativ',
-    description: 'Data limită pentru eseu despre tema naturii în opera lui Mihai Eminescu',
-    type: 'assignment',
-    startTime: startOfDay(addDays(assignmentDate, 3)).toISOString(),
-    endTime: setHours(addDays(assignmentDate, 3), 23).toISOString(),
-    courseId: '2'
-  });
-  
-  // Filter events based on the date range
-  return events.filter(event => {
+  const createEventWithNotification = async (event: Omit<CalendarEvent, 'id' | 'createdAt'>) => {
     try {
-      const eventStart = new Date(event.startTime);
-      if (!isValid(eventStart)) {
-        console.warn('Invalid event start time:', event.startTime);
-        return false;
-      }
-      return eventStart >= startDate && eventStart <= endDate;
+      const newEvent = await createEvent(event);
+      
+      addNotification({
+        title: 'Eveniment creat',
+        message: 'Evenimentul a fost adăugat în calendar cu succes.',
+        type: 'success'
+      });
+      
+      return newEvent;
     } catch (error) {
-      console.error('Error filtering event:', error);
-      return false;
+      const message = error instanceof Error ? error.message : 'Eroare la crearea evenimentului';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
     }
-  });
+  };
+  
+  const updateEventWithNotification = async (eventId: string, eventData: Partial<CalendarEvent>) => {
+    try {
+      const updatedEvent = await updateEvent(eventId, eventData);
+      
+      addNotification({
+        title: 'Eveniment actualizat',
+        message: 'Evenimentul a fost actualizat cu succes.',
+        type: 'success'
+      });
+      
+      return updatedEvent;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Eroare la actualizarea evenimentului';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
+    }
+  };
+  
+  const deleteEventWithNotification = async (eventId: string) => {
+    try {
+      await deleteEvent(eventId);
+      
+      addNotification({
+        title: 'Eveniment șters',
+        message: 'Evenimentul a fost șters cu succes.',
+        type: 'success'
+      });
+      
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Eroare la ștergerea evenimentului';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
+    }
+  };
+  
+  return {
+    createEventWithNotification,
+    updateEventWithNotification,
+    deleteEventWithNotification
+  };
 };

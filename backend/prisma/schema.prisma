@@ -120,7 +120,7 @@ model User {
   createdAt     DateTime          @default(now())
   points        Int               @default(0)
   referralCode  String?           @unique @db.VarChar(50)
-  referredById  String?           @db.Uuid
+  referredById  String?
   referredBy    User?             @relation("UserReferrals", fields: [referredById], references: [id])
   referrals     User[]            @relation("UserReferrals")
   lastLogin     DateTime?
@@ -144,12 +144,14 @@ model User {
   certificates        Certificate[]
   conversationParts   ConversationParticipant[]
   sentMessages        Message[]         @relation("MessageSenderConv")
-  attachments         Attachment[]
+  attachments         Attachment[]      @relation("UserAttachments")
   notifications       Notification[]
   subscriptionRecords UserSubscription[]
   bundlesOwned        UserBundle[]
   payments            Payment[]
   calendarEvents      CalendarEvent[]
+  eventsAsTeacher     CalendarEvent[]   @relation("EventTeacher")
+  eventsAsStudent     CalendarEvent[]   @relation("EventStudent")
   blogPosts           BlogPost[]        @relation("PostAuthor")
   blogComments        BlogComment[]
   submissionsGraded   AssignmentSubmission[] @relation("SubmissionGrader")
@@ -372,7 +374,7 @@ model TutoringSession {
   teacher        User              @relation("SessionTeacher", fields: [teacherId], references: [id])
   availability   TutoringAvailability[]
   requests       TutoringRequest[]
-  appointments   TutoringAppointment[]
+  appointments   TutoringAppointment[]  @relation("SessionAppointments")
   reviews        TutoringReview[]
   certificates   Certificate[]
 }
@@ -404,6 +406,7 @@ model TutoringRequest {
 model TutoringAppointment {
   id           String           @id @default(uuid())
   requestId    String  @unique
+  sessionId    String
   scheduledAt  DateTime
   duration     Int
   notes        String?
@@ -413,6 +416,7 @@ model TutoringAppointment {
   teacherId    String
   studentId    String
   request      TutoringRequest  @relation(fields: [requestId], references: [id])
+  session      TutoringSession  @relation("SessionAppointments", fields: [sessionId], references: [id])
   teacher      User            @relation("AppointmentTeacher", fields: [teacherId], references: [id])
   student      User            @relation("AppointmentStudent", fields: [studentId], references: [id])
 }
@@ -528,11 +532,13 @@ model Message {
 model Attachment {
   id        String   @id @default(uuid())
   messageId String
+  userId    String?
   fileName  String
   fileUrl   String
   fileType  String
   fileSize  Int
   message   Message  @relation(fields: [messageId], references: [id])
+  user      User?    @relation("UserAttachments", fields: [userId], references: [id])
 }
 
 model Notification {

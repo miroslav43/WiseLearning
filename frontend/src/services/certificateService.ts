@@ -1,8 +1,7 @@
-
-import { v4 as uuidv4 } from 'uuid';
-import { Certificate, Badge, User } from '@/types/user';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { Course } from '@/types/course';
-import { TutoringSession } from '@/types/tutoring';
+import { Badge, Certificate, User } from '@/types/user';
+import { apiClient } from '@/utils/apiClient';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -57,49 +56,29 @@ export const generateTutoringBadge = (): Badge => {
 };
 
 // Generate a certificate for course completion
-export const generateCourseCertificate = (
-  user: User,
-  course: Course,
-  customMessage?: string
-): Certificate => {
-  const badge = generateCourseBadge(course);
-  
-  return {
-    id: uuidv4(),
-    userId: user.id,
-    title: `Certificate of Completion: ${course.title}`,
-    issueDate: new Date(),
-    type: 'course',
-    courseId: course.id,
-    courseName: course.title,
-    teacherId: course.teacherId,
-    teacherName: course.teacherName,
-    customMessage: customMessage,
-    badgeId: badge.id
-  };
+export const generateCourseCertificate = async (
+  courseId: string,
+  customMessage?: string,
+  badgeId?: string
+) => {
+  return apiClient.post<Certificate>('/certificates', {
+    courseId,
+    customMessage,
+    badgeId
+  });
 };
 
 // Generate a certificate for tutoring completion
-export const generateTutoringCertificate = (
-  user: User,
-  session: TutoringSession,
-  customMessage?: string
-): Certificate => {
-  const badge = generateTutoringBadge();
-  
-  return {
-    id: uuidv4(),
-    userId: user.id,
-    title: `Certificate of Excellence: ${session.subject}`,
-    issueDate: new Date(),
-    type: 'tutoring',
-    tutoringId: session.id,
-    tutoringSubject: session.subject,
-    teacherId: session.teacherId,
-    teacherName: session.teacherName,
-    customMessage: customMessage,
-    badgeId: badge.id
-  };
+export const generateTutoringCertificate = async (
+  tutoringId: string,
+  customMessage?: string,
+  badgeId?: string
+) => {
+  return apiClient.post<Certificate>('/certificates', {
+    tutoringId,
+    customMessage,
+    badgeId
+  });
 };
 
 // Generate PDF certificate from HTML element
@@ -145,4 +124,82 @@ export const addCertificateToUser = (user: User, certificate: Certificate): User
 // Get badge by ID
 export const getBadgeById = (badgeId: string): Badge | undefined => {
   return badgeTemplates.find(badge => badge.id === badgeId);
+};
+
+// Get certificates for a specific user
+export const getUserCertificates = async (userId: string) => {
+  return apiClient.get<Certificate[]>(`/certificates/user/${userId}`);
+};
+
+// Get my certificates (for the current user)
+export const getMyCertificates = async () => {
+  const userId = 'current'; // This will be handled by the backend based on the JWT token
+  return apiClient.get<Certificate[]>(`/certificates/user/${userId}`);
+};
+
+// Get a specific certificate
+export const getCertificateById = async (certificateId: string) => {
+  return apiClient.get<Certificate>(`/certificates/${certificateId}`);
+};
+
+// Custom hook for using certificate service with notifications
+export const useCertificateService = () => {
+  const { addNotification } = useNotifications();
+  
+  const generateCourseCertificateWithNotification = async (
+    courseId: string,
+    customMessage?: string,
+    badgeId?: string
+  ) => {
+    try {
+      const certificate = await generateCourseCertificate(courseId, customMessage, badgeId);
+      
+      addNotification({
+        title: 'Certificat generat',
+        message: 'Certificatul tău pentru finalizarea cursului a fost generat cu succes.',
+        type: 'success'
+      });
+      
+      return certificate;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Eroare la generarea certificatului';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
+    }
+  };
+  
+  const generateTutoringCertificateWithNotification = async (
+    tutoringId: string,
+    customMessage?: string,
+    badgeId?: string
+  ) => {
+    try {
+      const certificate = await generateTutoringCertificate(tutoringId, customMessage, badgeId);
+      
+      addNotification({
+        title: 'Certificat generat',
+        message: 'Certificatul tău pentru finalizarea tutoriatului a fost generat cu succes.',
+        type: 'success'
+      });
+      
+      return certificate;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Eroare la generarea certificatului';
+      addNotification({
+        title: 'Eroare',
+        message,
+        type: 'error'
+      });
+      throw error;
+    }
+  };
+  
+  return {
+    generateCourseCertificateWithNotification,
+    generateTutoringCertificateWithNotification
+  };
 };

@@ -1,22 +1,18 @@
-
-export type CalendarEventType = 'course' | 'tutoring' | 'assignment';
-
+/**
+ * Calendar event model
+ */
 export interface CalendarEvent {
   id: string;
   title: string;
-  description: string;
-  type: CalendarEventType;
-  startTime: string; // ISO string
-  endTime?: string; // ISO string
-  
-  // Course specific properties
-  courseId?: string;
-  lessonId?: string;
-  
-  // Tutoring specific properties
-  teacherId?: string;
-  teacherName?: string;
-  studentId?: string;
-  studentName?: string;
+  description?: string;
+  startDate: Date | string;
+  endDate: Date | string;
   location?: string;
+  isAllDay: boolean;
+  type: 'course' | 'tutoring' | 'personal' | 'meeting' | string;
+  userId: string;
+  courseId?: string;
+  tutoringId?: string;
+  color?: string;
+  createdAt?: Date | string;
 }

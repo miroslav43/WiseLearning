@@ -1,39 +1,50 @@
-
-import { useState, useEffect } from 'react';
+import { fetchCourse } from '@/services/courseService';
 import { Course, Lesson } from '@/types/course';
-import { mockCourses } from '@/data/mockData';
+import { useEffect, useState } from 'react';
 
 export const useCourse = (courseId: string | undefined) => {
   const [course, setCourse] = useState<Course | null>(null);
   const [expandedTopics, setExpandedTopics] = useState<{[key: string]: boolean}>({});
   const [isLoading, setIsLoading] = useState(true);
   const [firstLessonId, setFirstLessonId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCourse = async () => {
+    const loadCourse = async () => {
       setIsLoading(true);
-      // In a real application, this would be an API call
-      const foundCourse = mockCourses.find(c => c.id === courseId);
+      setError(null);
       
-      if (foundCourse) {
-        setCourse(foundCourse);
-        // Initialize all topics as expanded
-        const topicsState = foundCourse.topics.reduce((acc, topic) => {
-          acc[topic.id] = true;
-          return acc;
-        }, {} as {[key: string]: boolean});
-        setExpandedTopics(topicsState);
-        
-        // Find the first lesson ID for the course
-        if (foundCourse.topics.length > 0 && foundCourse.topics[0].lessons.length > 0) {
-          setFirstLessonId(foundCourse.topics[0].lessons[0].id);
-        }
+      if (!courseId) {
+        setIsLoading(false);
+        return;
       }
       
-      setIsLoading(false);
+      try {
+        const foundCourse = await fetchCourse(courseId);
+        
+        if (foundCourse) {
+          setCourse(foundCourse);
+          // Initialize all topics as expanded
+          const topicsState = foundCourse.topics.reduce((acc, topic) => {
+            acc[topic.id] = true;
+            return acc;
+          }, {} as {[key: string]: boolean});
+          setExpandedTopics(topicsState);
+          
+          // Find the first lesson ID for the course
+          if (foundCourse.topics.length > 0 && foundCourse.topics[0].lessons.length > 0) {
+            setFirstLessonId(foundCourse.topics[0].lessons[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch course:', err);
+        setError('Nu am putut încărca detaliile cursului.');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    fetchCourse();
+    loadCourse();
   }, [courseId]);
 
   const toggleTopic = (topicId: string) => {
@@ -77,6 +88,7 @@ export const useCourse = (courseId: string | undefined) => {
   return {
     course,
     isLoading,
+    error,
     expandedTopics,
     toggleTopic,
     formatDuration,
