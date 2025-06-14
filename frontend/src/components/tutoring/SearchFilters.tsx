@@ -1,37 +1,43 @@
-
-import React from 'react';
-import { Search, Filter, ArrowUpAZ, ArrowDownAZ, DollarSign, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-  SheetFooter,
 } from "@/components/ui/sheet";
-import { TutoringLocationType } from '@/types/tutoring';
+import { Slider } from "@/components/ui/slider";
+import { TutoringLocationType } from "@/types/tutoring";
+import {
+  ArrowDownAZ,
+  ArrowUpAZ,
+  DollarSign,
+  Filter,
+  Search,
+  X,
+} from "lucide-react";
+import React from "react";
 
 interface SearchFiltersProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
   subjectFilter: string;
   setSubjectFilter: (value: string) => void;
-  locationFilter: TutoringLocationType | 'all';
-  setLocationFilter: (value: TutoringLocationType | 'all') => void;
-  priceSort: 'asc' | 'desc' | 'none';
-  setPriceSort: (value: 'asc' | 'desc' | 'none') => void;
+  locationFilter: TutoringLocationType | "all";
+  setLocationFilter: (value: TutoringLocationType | "all") => void;
+  priceSort: "asc" | "desc" | "none";
+  setPriceSort: (value: "asc" | "desc" | "none") => void;
   priceRange: [number, number];
   setPriceRange: (value: [number, number]) => void;
   uniqueSubjects: string[];
@@ -50,44 +56,46 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
   priceRange,
   setPriceRange,
   uniqueSubjects,
-  resetFilters
+  resetFilters,
 }) => {
   // Convert active filters to badges for mobile view
   const activeFilters = [];
-  
-  if (subjectFilter !== 'all') {
+
+  if (subjectFilter !== "all") {
     activeFilters.push({
       label: `Materie: ${subjectFilter}`,
-      clear: () => setSubjectFilter('all')
+      clear: () => setSubjectFilter("all"),
     });
   }
-  
-  if (locationFilter !== 'all') {
+
+  if (locationFilter !== "all") {
     const locationLabels = {
-      online: 'Online',
-      offline: 'În persoană',
-      both: 'Ambele'
+      online: "Online",
+      offline: "În persoană",
+      both: "Ambele",
     };
     activeFilters.push({
-      label: `Locație: ${locationLabels[locationFilter as keyof typeof locationLabels]}`,
-      clear: () => setLocationFilter('all')
+      label: `Locație: ${
+        locationLabels[locationFilter as keyof typeof locationLabels]
+      }`,
+      clear: () => setLocationFilter("all"),
     });
   }
-  
-  if (priceSort !== 'none') {
+
+  if (priceSort !== "none") {
     activeFilters.push({
-      label: `Preț: ${priceSort === 'asc' ? 'Crescător' : 'Descrescător'}`,
-      clear: () => setPriceSort('none')
+      label: `Preț: ${priceSort === "asc" ? "Crescător" : "Descrescător"}`,
+      clear: () => setPriceSort("none"),
     });
   }
-  
+
   if (priceRange[0] > 0 || priceRange[1] < 200) {
     activeFilters.push({
       label: `Preț: ${priceRange[0]}-${priceRange[1]} RON`,
-      clear: () => setPriceRange([0, 200])
+      clear: () => setPriceRange([0, 200]),
     });
   }
-  
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -98,10 +106,10 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
             placeholder="Caută după subiect sau profesor..."
             className="pl-10"
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         {/* Desktop Filters */}
         <div className="hidden md:grid md:grid-cols-2 gap-4">
           <Select value={subjectFilter} onValueChange={setSubjectFilter}>
@@ -110,13 +118,20 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toate materiile</SelectItem>
-              {uniqueSubjects.map(subject => (
-                <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+              {(uniqueSubjects || []).map((subject) => (
+                <SelectItem key={subject} value={subject}>
+                  {subject}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          
-          <Select value={locationFilter} onValueChange={value => setLocationFilter(value as TutoringLocationType | 'all')}>
+
+          <Select
+            value={locationFilter}
+            onValueChange={(value) =>
+              setLocationFilter(value as TutoringLocationType | "all")
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Locație" />
             </SelectTrigger>
@@ -146,26 +161,36 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                   Ajustează filtrele pentru a găsi sesiunea potrivită
                 </SheetDescription>
               </SheetHeader>
-              
+
               <div className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Materie</label>
-                  <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                  <Select
+                    value={subjectFilter}
+                    onValueChange={setSubjectFilter}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Alege materia" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Toate materiile</SelectItem>
-                      {uniqueSubjects.map(subject => (
-                        <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                      {(uniqueSubjects || []).map((subject) => (
+                        <SelectItem key={subject} value={subject}>
+                          {subject}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Tip de sesiune</label>
-                  <Select value={locationFilter} onValueChange={value => setLocationFilter(value as TutoringLocationType | 'all')}>
+                  <Select
+                    value={locationFilter}
+                    onValueChange={(value) =>
+                      setLocationFilter(value as TutoringLocationType | "all")
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Alege tipul" />
                     </SelectTrigger>
@@ -177,10 +202,17 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Sortare după preț</label>
-                  <Select value={priceSort} onValueChange={value => setPriceSort(value as 'asc' | 'desc' | 'none')}>
+                  <label className="text-sm font-medium">
+                    Sortare după preț
+                  </label>
+                  <Select
+                    value={priceSort}
+                    onValueChange={(value) =>
+                      setPriceSort(value as "asc" | "desc" | "none")
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Sortează" />
                     </SelectTrigger>
@@ -191,10 +223,12 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium">Interval de preț</label>
+                    <label className="text-sm font-medium">
+                      Interval de preț
+                    </label>
                     <span className="text-sm text-muted-foreground">
                       {priceRange[0]} - {priceRange[1]} RON
                     </span>
@@ -205,14 +239,20 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                     max={200}
                     step={10}
                     value={priceRange}
-                    onValueChange={(value) => setPriceRange(value as [number, number])}
+                    onValueChange={(value) =>
+                      setPriceRange(value as [number, number])
+                    }
                     className="mt-6"
                   />
                 </div>
               </div>
-              
+
               <SheetFooter className="mt-6">
-                <Button variant="outline" onClick={resetFilters} className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  className="w-full sm:w-auto"
+                >
                   Resetează
                 </Button>
                 <Button className="w-full sm:w-auto bg-[#13361C] hover:bg-[#13361C]/90">
@@ -221,12 +261,14 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
               </SheetFooter>
             </SheetContent>
           </Sheet>
-          
+
           {/* Desktop Sort Dropdown */}
           <div className="hidden md:block w-full">
-            <Select 
-              value={priceSort} 
-              onValueChange={value => setPriceSort(value as 'asc' | 'desc' | 'none')}
+            <Select
+              value={priceSort}
+              onValueChange={(value) =>
+                setPriceSort(value as "asc" | "desc" | "none")
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Sortează" />
@@ -248,12 +290,14 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
               </SelectContent>
             </Select>
           </div>
-          
+
           {/* Sort on Mobile */}
           <div className="md:hidden flex-1">
-            <Select 
-              value={priceSort} 
-              onValueChange={value => setPriceSort(value as 'asc' | 'desc' | 'none')}
+            <Select
+              value={priceSort}
+              onValueChange={(value) =>
+                setPriceSort(value as "asc" | "desc" | "none")
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Sortează" />
@@ -267,7 +311,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
           </div>
         </div>
       </div>
-      
+
       {/* Desktop Price Range Slider */}
       <div className="hidden md:block space-y-4">
         <div className="flex justify-between items-center">
@@ -289,20 +333,20 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
           className="mt-2"
         />
       </div>
-      
+
       {/* Active Filters */}
       {activeFilters.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-2">
           {activeFilters.map((filter, index) => (
-            <Badge 
-              key={index} 
+            <Badge
+              key={index}
               variant="secondary"
               className="flex items-center gap-1 py-1 pr-1 pl-3"
             >
               {filter.label}
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-5 w-5 rounded-full hover:bg-gray-200"
                 onClick={filter.clear}
               >
@@ -310,10 +354,10 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
               </Button>
             </Badge>
           ))}
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
+
+          <Button
+            variant="ghost"
+            size="sm"
             className="text-muted-foreground text-xs"
             onClick={resetFilters}
           >

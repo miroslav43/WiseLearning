@@ -1,17 +1,19 @@
-
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import BrandLogo from './BrandLogo';
-import DesktopNavigation from './DesktopNavigation';
-import AuthenticatedActions from './AuthenticatedActions';
-import UnauthenticatedActions from './UnauthenticatedActions';
-import MobileMenu from './MobileMenu';
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { Menu, X } from "lucide-react";
+import React, { useState } from "react";
+import AuthenticatedActions from "./AuthenticatedActions";
+import BrandLogo from "./BrandLogo";
+import DesktopNavigation from "./DesktopNavigation";
+import MobileMenu from "./MobileMenu";
+import UnauthenticatedActions from "./UnauthenticatedActions";
 
 const Navbar: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const closeMenu = () => setIsMenuOpen(false);
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50 w-full">
@@ -30,24 +32,26 @@ const Navbar: React.FC = () => {
             ) : (
               <UnauthenticatedActions />
             )}
-            
+
             {/* Mobile Menu Toggle */}
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
-              className="md:hidden" 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden"
+              onClick={toggleMenu}
             >
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </Button>
           </div>
         </div>
       </div>
 
       {/* Mobile Menu */}
-      <MobileMenu 
-        isMenuOpen={isMenuOpen}
-      />
+      <MobileMenu isMenuOpen={isMenuOpen} onClose={closeMenu} />
     </header>
   );
 };

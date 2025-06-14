@@ -61,7 +61,7 @@ const StudentCoursesPage: React.FC = () => {
               course.image ||
               "https://images.unsplash.com/photo-1516116216624-53e697fedbea",
             progress: course.progress || 0,
-            teacher: course.teacherName || "Unknown Teacher",
+            teacher: course.teacher?.name || "Unknown Teacher",
             lastAccessed: course.lastAccessed
               ? new Date(course.lastAccessed)
               : undefined,
@@ -90,6 +90,65 @@ const StudentCoursesPage: React.FC = () => {
     };
 
     loadCourses();
+  }, [user]);
+
+  // Add an additional useEffect to handle page visibility/focus refresh
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user && user.role === "student") {
+        // Refresh data when user comes back to the page
+        loadCourses();
+      }
+    };
+
+    const loadCourses = async () => {
+      if (!user || user.role !== "student") return;
+
+      try {
+        const coursesData = await fetchMyEnrolledCourses();
+
+        const active: CourseWithProgress[] = [];
+        const completed: CourseWithProgress[] = [];
+
+        coursesData.forEach((course) => {
+          const courseWithProgress = {
+            id: course.id,
+            title: course.title,
+            description: course.description || "",
+            image:
+              course.image ||
+              "https://images.unsplash.com/photo-1516116216624-53e697fedbea",
+            progress: course.progress || 0,
+            teacher: course.teacher?.name || "Unknown Teacher",
+            lastAccessed: course.lastAccessed
+              ? new Date(course.lastAccessed)
+              : undefined,
+            completedDate: course.completedDate
+              ? new Date(course.completedDate)
+              : undefined,
+          };
+
+          if (courseWithProgress.progress >= 100) {
+            completed.push(courseWithProgress);
+          } else {
+            active.push(courseWithProgress);
+          }
+        });
+
+        setActiveCourses(active);
+        setCompletedCourses(completed);
+      } catch (err) {
+        console.error("Failed to refresh enrolled courses:", err);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
+    };
   }, [user]);
 
   if (!user || user.role !== "student") {

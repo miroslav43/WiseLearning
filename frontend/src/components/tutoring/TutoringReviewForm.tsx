@@ -1,24 +1,23 @@
-
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import ReviewForm from '@/components/reviews/ReviewForm';
-import { useReviewService } from '@/services/reviewService';
+import ReviewForm from "@/components/reviews/ReviewForm";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTutoringService } from "@/services/tutoringService";
+import React, { useState } from "react";
 
 interface TutoringReviewFormProps {
   sessionId: string;
-  teacherName?: string; // Added teacherName prop
+  teacherName?: string;
   onReviewAdded: () => void;
 }
 
-const TutoringReviewForm: React.FC<TutoringReviewFormProps> = ({ 
-  sessionId, 
+const TutoringReviewForm: React.FC<TutoringReviewFormProps> = ({
+  sessionId,
   teacherName,
-  onReviewAdded 
+  onReviewAdded,
 }) => {
   const { user } = useAuth();
-  const { hasStudentReviewedSession, submitTutoringReview } = useReviewService();
+  const { createTutoringReview, isLoading } = useTutoringService();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
 
@@ -34,42 +33,25 @@ const TutoringReviewForm: React.FC<TutoringReviewFormProps> = ({
     );
   }
 
-  const hasReviewed = hasStudentReviewedSession(user.id, sessionId);
-
-  if (hasReviewed) {
-    return (
-      <Card>
-        <CardContent className="py-4">
-          <p className="text-center text-gray-500">
-            Ai adăugat deja o recenzie pentru această sesiune de tutoriat.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const handleSubmit = async (data: { rating: number; comment: string }) => {
     if (!user) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      await submitTutoringReview({
+      await createTutoringReview({
         sessionId,
         studentId: user.id,
         studentName: user.name,
         studentAvatar: user.avatar,
-        teacherName: teacherName, // Set the teacherName
-        userName: user.name,      // Set userName for compatibility
-        userAvatar: user.avatar,  // Set userAvatar for compatibility
         rating: data.rating,
-        comment: data.comment
+        comment: data.comment,
       });
-      
+
       setIsFormVisible(false);
       onReviewAdded();
     } catch (error) {
-      console.error('Error submitting review:', error);
+      console.error("Error submitting review:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -82,11 +64,18 @@ const TutoringReviewForm: React.FC<TutoringReviewFormProps> = ({
       </CardHeader>
       <CardContent>
         {isFormVisible ? (
-          <ReviewForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+          <ReviewForm
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting || isLoading}
+          />
         ) : (
           <div className="text-center">
-            <p className="mb-4 text-gray-600">Împărtășește experiența ta cu această sesiune de tutoriat.</p>
-            <Button onClick={() => setIsFormVisible(true)}>Scrie o recenzie</Button>
+            <p className="mb-4 text-gray-600">
+              Împărtășește experiența ta cu această sesiune de tutoriat.
+            </p>
+            <Button onClick={() => setIsFormVisible(true)}>
+              Scrie o recenzie
+            </Button>
           </div>
         )}
       </CardContent>

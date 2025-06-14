@@ -167,6 +167,7 @@ export const checkOwnership = (resourceType: string) => {
           break;
         
         case 'tutoring':
+        case 'tutoringSession':
           resource = await prisma.tutoringSession.findUnique({
             where: { id: resourceId },
             select: { teacherId: true }

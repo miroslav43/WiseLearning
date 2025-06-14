@@ -10,7 +10,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import useUser from "@/hooks/useUser";
-import { Loader2, LogOut, Settings, User } from "lucide-react";
+import {
+  Award,
+  BookOpen,
+  Bookmark,
+  Calendar,
+  Coins,
+  CreditCard,
+  Gauge,
+  Heart,
+  Loader2,
+  LogOut,
+  MessageCircle,
+  Settings,
+  Star,
+  Trophy,
+  User,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -43,13 +60,6 @@ export function UserDropdown() {
       .toUpperCase();
   };
 
-  // Get dashboard link based on user role
-  const getDashboardLink = () => {
-    if (isAdmin) return "/admin";
-    if (isTeacher) return "/teacher/courses";
-    return "/my-courses";
-  };
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -72,17 +82,141 @@ export function UserDropdown() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => navigate(getDashboardLink())}>
-            <User className="mr-2 h-4 w-4" />
-            <span>Panou personal</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link to="/profile">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Setări profil</span>
+
+        {/* Role-specific menu items */}
+        {isStudent && (
+          <DropdownMenuGroup>
+            <Link to="/dashboard/student">
+              <DropdownMenuItem>
+                <Gauge className="mr-2 h-4 w-4" />
+                <span>Dashboard</span>
+              </DropdownMenuItem>
             </Link>
-          </DropdownMenuItem>
+            <Link to="/my-courses">
+              <DropdownMenuItem>
+                <BookOpen className="mr-2 h-4 w-4" />
+                <span>Cursurile mele</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/my-saved-courses">
+              <DropdownMenuItem>
+                <Bookmark className="mr-2 h-4 w-4" />
+                <span>Cursuri salvate</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/my-points">
+              <DropdownMenuItem>
+                <Coins className="mr-2 h-4 w-4" />
+                <span>Punctele mele</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/my-achievements">
+              <DropdownMenuItem>
+                <Trophy className="mr-2 h-4 w-4" />
+                <span>Realizările mele</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/my-certificates">
+              <DropdownMenuItem>
+                <Award className="mr-2 h-4 w-4" />
+                <span>Certificatele mele</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/my-tutoring">
+              <DropdownMenuItem>
+                <Heart className="mr-2 h-4 w-4" />
+                <span>Meditațiile mele</span>
+              </DropdownMenuItem>
+            </Link>
+          </DropdownMenuGroup>
+        )}
+
+        {isTeacher && (
+          <DropdownMenuGroup>
+            <Link to="/dashboard/teacher">
+              <DropdownMenuItem>
+                <Gauge className="mr-2 h-4 w-4" />
+                <span>Dashboard</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/teacher/profile">
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                <span>Profilul meu de profesor</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/my-courses/manage">
+              <DropdownMenuItem>
+                <BookOpen className="mr-2 h-4 w-4" />
+                <span>Cursurile mele</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/my-students">
+              <DropdownMenuItem>
+                <Users className="mr-2 h-4 w-4" />
+                <span>Studenții mei</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/my-tutoring/manage">
+              <DropdownMenuItem>
+                <Heart className="mr-2 h-4 w-4" />
+                <span>Meditațiile mele</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link to="/teacher/reviews">
+              <DropdownMenuItem>
+                <Star className="mr-2 h-4 w-4" />
+                <span>Recenziile mele</span>
+              </DropdownMenuItem>
+            </Link>
+          </DropdownMenuGroup>
+        )}
+
+        {isAdmin && (
+          <DropdownMenuGroup>
+            <Link to="/admin">
+              <DropdownMenuItem>
+                <Gauge className="mr-2 h-4 w-4" />
+                <span>Admin Dashboard</span>
+              </DropdownMenuItem>
+            </Link>
+          </DropdownMenuGroup>
+        )}
+
+        <DropdownMenuSeparator />
+
+        {/* Common menu items for all users */}
+        <DropdownMenuGroup>
+          <Link to="/messaging">
+            <DropdownMenuItem>
+              <MessageCircle className="mr-2 h-4 w-4" />
+              <span>Mesaje</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link to="/calendar">
+            <DropdownMenuItem>
+              <Calendar className="mr-2 h-4 w-4" />
+              <span>Calendar</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link to="/subscriptions">
+            <DropdownMenuItem>
+              <CreditCard className="mr-2 h-4 w-4" />
+              <span>Abonamente</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link to="/profile">
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              <span>Profilul meu</span>
+            </DropdownMenuItem>
+          </Link>
+          <Link to="/settings">
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Setări</span>
+            </DropdownMenuItem>
+          </Link>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem

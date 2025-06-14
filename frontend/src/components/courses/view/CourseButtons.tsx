@@ -1,29 +1,27 @@
-
-import React from 'react';
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Coins, Eye } from "lucide-react";
-import { useCart } from "@/contexts/cart";
-import { usePoints } from "@/contexts/PointsContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/cart";
+import { useCourseContext } from "@/contexts/CourseContext";
+import { usePoints } from "@/contexts/PointsContext";
 import { useToast } from "@/hooks/use-toast";
-import { Course } from "@/types/course";
+import { Coins, Eye, ShoppingCart } from "lucide-react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 
-interface CourseButtonsProps {
-  course: Course;
-}
-
-const CourseButtons: React.FC<CourseButtonsProps> = ({ course }) => {
+const CourseButtons: React.FC = () => {
+  const { course, firstLessonId } = useCourseContext();
   const { addToCart, isInCart, checkoutWithPoints } = useCart();
   const { hasEnoughPoints, formatPoints } = usePoints();
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
-  
+
+  if (!course) return null;
+
   const alreadyInCart = isInCart(course.id);
   const hasPoints = hasEnoughPoints(course.pointsPrice);
   const canBuyWithPoints = isAuthenticated && hasPoints && !alreadyInCart;
-  const isTeacher = user?.role === 'teacher';
+  const isTeacher = user?.role === "teacher";
 
   const handleBuyWithPoints = async () => {
     if (!isAuthenticated) {
@@ -34,20 +32,22 @@ const CourseButtons: React.FC<CourseButtonsProps> = ({ course }) => {
       });
       return;
     }
-    
+
     if (!hasEnoughPoints(course.pointsPrice)) {
       toast({
         title: "Puncte insuficiente",
-        description: `Ai nevoie de ${formatPoints(course.pointsPrice)} puncte pentru a achiziționa acest curs.`,
+        description: `Ai nevoie de ${formatPoints(
+          course.pointsPrice
+        )} puncte pentru a achiziționa acest curs.`,
         variant: "destructive",
       });
       return;
     }
-    
+
     // Add to cart and checkout with points
     addToCart(course);
     const success = await checkoutWithPoints();
-    
+
     if (success) {
       toast({
         title: "Achiziție reușită!",
@@ -58,11 +58,10 @@ const CourseButtons: React.FC<CourseButtonsProps> = ({ course }) => {
   };
 
   const handlePreview = () => {
-    // Check if the course has topics and lessons
-    if (course.topics && course.topics.length > 0 && course.topics[0].lessons && course.topics[0].lessons.length > 0) {
+    // Check if there's a first lesson ID available
+    if (firstLessonId) {
       // Navigate to the first lesson of the course
-      const firstLesson = course.topics[0].lessons[0];
-      navigate(`/courses/${course.id}/lessons/${firstLesson.id}`);
+      navigate(`/courses/${course.id}/lessons/${firstLessonId}`);
     } else {
       // If no lessons are available, show a toast message
       toast({
@@ -76,22 +75,22 @@ const CourseButtons: React.FC<CourseButtonsProps> = ({ course }) => {
     <div className="space-y-3">
       {/* Button 1: Add to Cart - only hide for teachers */}
       {!isTeacher && (
-        <Button 
-          className="w-full gap-2 bg-brand-800" 
-          variant={alreadyInCart ? 'secondary' : 'default'}
+        <Button
+          className="w-full gap-2 bg-brand-800"
+          variant={alreadyInCart ? "secondary" : "default"}
           onClick={() => addToCart(course)}
           disabled={alreadyInCart}
         >
           <ShoppingCart className="h-4 w-4" />
-          {alreadyInCart ? 'În coș' : 'Adaugă în coș'}
+          {alreadyInCart ? "În coș" : "Adaugă în coș"}
         </Button>
       )}
-      
+
       {/* Button 2: Buy with Points - only hide for teachers */}
       {!isTeacher && (
-        <Button 
-          variant="secondary" 
-          className="w-full gap-2" 
+        <Button
+          variant="secondary"
+          className="w-full gap-2"
           disabled={!canBuyWithPoints}
           onClick={handleBuyWithPoints}
         >
@@ -99,10 +98,10 @@ const CourseButtons: React.FC<CourseButtonsProps> = ({ course }) => {
           Cumpără cu {formatPoints(course.pointsPrice)} puncte
         </Button>
       )}
-      
+
       {/* Button 3: Preview - show for everyone */}
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         className="w-full gap-2"
         onClick={handlePreview}
       >

@@ -1,11 +1,12 @@
-
-import React from 'react';
-import { Calendar } from "lucide-react";
+import { Award, BookOpen, Calendar, FileText, Video } from "lucide-react";
+import React from "react";
 
 interface CourseIncludesProps {
   totalLessons: number;
 }
 
+// We'll keep the props for now since CourseSidebar is already passing them
+// In a full refactor, we would update CourseSidebar to not pass these props
 const CourseIncludes: React.FC<CourseIncludesProps> = ({ totalLessons }) => {
   return (
     <div>
@@ -16,19 +17,19 @@ const CourseIncludes: React.FC<CourseIncludesProps> = ({ totalLessons }) => {
           <span>Acces nelimitat la toate materialele</span>
         </li>
         <li className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-brand-500" />
+          <Video className="h-4 w-4 text-brand-500" />
           <span>{totalLessons} lecții video</span>
         </li>
         <li className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-brand-500" />
+          <FileText className="h-4 w-4 text-brand-500" />
           <span>Resurse descărcabile</span>
         </li>
         <li className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-brand-500" />
+          <BookOpen className="h-4 w-4 text-brand-500" />
           <span>Exerciții practice</span>
         </li>
         <li className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-brand-500" />
+          <Award className="h-4 w-4 text-brand-500" />
           <span>Certificat de absolvire</span>
         </li>
       </ul>

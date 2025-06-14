@@ -12,14 +12,14 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
 /**
  * Login a user with email and password
  */
-export const login = async (credentials: LoginCredentials): Promise<User> => {
+export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
     const response = await apiClient.post<AuthResponse>('/auth/login', credentials as unknown as Record<string, unknown>);
     
     // Store the token in localStorage
     setToken(response.token);
     
-    return response.user;
+    return response;
   } catch (error) {
     console.error('Login failed:', error);
     throw error;
@@ -29,11 +29,11 @@ export const login = async (credentials: LoginCredentials): Promise<User> => {
 /**
  * Register a new user
  */
-export const register = async (userData: RegistrationData): Promise<User> => {
+export const register = async (userData: RegistrationData): Promise<AuthResponse> => {
   try {
     // Convert from frontend's firstName/lastName format to backend's name format
     const backendData = {
-      name: `${userData.firstName} ${userData.lastName}`,
+      name: `${userData.firstName.trim()} ${userData.lastName.trim()}`.trim(),
       email: userData.email,
       password: userData.password,
       role: userData.role
@@ -43,20 +43,20 @@ export const register = async (userData: RegistrationData): Promise<User> => {
     
     const response = await apiClient.post<AuthResponse>('/auth/register', backendData as unknown as Record<string, unknown>);
     
-    console.log('Registration response:', JSON.stringify(response, null, 2));
+    console.log('Registration response user:', JSON.stringify(response.user, null, 2));
     
     // Store the token in localStorage
     if (response.token) {
       setToken(response.token);
-      return response.user;
+      return response;
     } else {
       throw new Error('No authentication token received');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Registration failed:', error);
     // Try to extract more meaningful error messages from the response
-    if (error.message && typeof error.message === 'string') {
-      throw new Error(error.message);
+    if (error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string') {
+      throw new Error((error as any).message);
     } else {
       throw new Error('Registration failed. Please try again.');
     }
@@ -76,7 +76,9 @@ export const logout = (): void => {
  */
 export const getCurrentUser = async (): Promise<User> => {
   try {
-    return await apiClient.get<User>('/auth/me');
+    const user = await apiClient.get<User>('/auth/me');
+    console.log('getCurrentUser response:', JSON.stringify(user, null, 2));
+    return user;
   } catch (error) {
     console.error('Failed to get current user:', error);
     throw error;

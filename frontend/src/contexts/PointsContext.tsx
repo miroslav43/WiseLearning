@@ -1,100 +1,134 @@
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useAuth } from './AuthContext';
-import { PointsTransaction, Achievement } from '@/types/user';
-import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
+import { useToast } from "@/hooks/use-toast";
+import * as pointsService from "@/services/pointsService";
+import { PointsPackage } from "@/services/pointsService";
+import { Achievement, PointsTransaction } from "@/types/user";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
 
 interface PointsContextType {
   points: number;
   transactions: PointsTransaction[];
   achievements: Achievement[];
-  addPoints: (amount: number, type: 'purchase' | 'referral' | 'achievement', description: string) => void;
+  addPoints: (
+    amount: number,
+    type: "purchase" | "referral" | "achievement",
+    description: string
+  ) => Promise<void>;
   deductPoints: (amount: number, description: string) => Promise<boolean>;
   hasEnoughPoints: (amount: number) => boolean;
-  buyPointsPackage: (packageId: string) => void;
   completeAchievement: (achievementId: string) => void;
   formatPoints: (points: number | undefined | null) => string;
+  isLoading: boolean;
+  refreshPoints: () => Promise<void>;
+  refreshTransactions: () => Promise<void>;
 }
 
 const PointsContext = createContext<PointsContextType>({
   points: 0,
   transactions: [],
   achievements: [],
-  addPoints: () => {},
+  addPoints: async () => {},
   deductPoints: async () => false,
   hasEnoughPoints: () => false,
-  buyPointsPackage: () => {},
   completeAchievement: () => {},
-  formatPoints: () => '',
+  formatPoints: () => "",
+  isLoading: false,
+  refreshPoints: async () => {},
+  refreshTransactions: async () => {},
 });
 
 export const usePoints = () => useContext(PointsContext);
 
-// Mock points packages
-export const pointsPackages = [
-  { id: 'package-1', points: 500, price: 49, discounted: false },
-  { id: 'package-2', points: 1000, price: 89, discounted: false },
-  { id: 'package-3', points: 2500, price: 199, discounted: true, originalPrice: 249 },
-  { id: 'package-4', points: 5000, price: 379, discounted: true, originalPrice: 499 },
-];
-
-export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const { user, isAuthenticated, updateUserData } = useAuth();
   const { toast } = useToast();
   const [points, setPoints] = useState<number>(0);
   const [transactions, setTransactions] = useState<PointsTransaction[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  
-  // Load points data from localStorage on initial render
+  const [isLoading, setIsLoading] = useState(true);
+  const [pointsPackages, setPointsPackages] = useState<PointsPackage[]>([]);
+
+  // Load data from API on initial render
   useEffect(() => {
     if (isAuthenticated && user) {
-      // In a real app, these would come from the user object or API
-      // For now, we'll use localStorage to simulate persistence
-      const savedPoints = localStorage.getItem(`userPoints-${user.id}`);
-      const savedTransactions = localStorage.getItem(`userTransactions-${user.id}`);
-      
-      if (savedPoints) {
-        setPoints(parseInt(savedPoints, 10));
-      } else {
-        // Default starting points
-        setPoints(user.points || 500);
-        localStorage.setItem(`userPoints-${user.id}`, String(user.points || 500));
-      }
-      
-      if (savedTransactions) {
-        try {
-          const parsedTransactions = JSON.parse(savedTransactions);
-          // Convert string dates back to Date objects
-          const fixedTransactions = parsedTransactions.map((t: any) => ({
-            ...t,
-            createdAt: new Date(t.createdAt)
-          }));
-          setTransactions(fixedTransactions);
-        } catch (error) {
-          console.error('Failed to parse transactions:', error);
-          setTransactions(user.pointsHistory || []);
-        }
-      } else {
-        // Use transactions from user object
-        setTransactions(user.pointsHistory || []);
-        localStorage.setItem(`userTransactions-${user.id}`, JSON.stringify(user.pointsHistory || []));
-      }
-      
-      // Set achievements from user
-      setAchievements(user.achievements || []);
+      refreshData();
+    } else {
+      setIsLoading(false);
     }
   }, [isAuthenticated, user]);
-  
-  // Save points data to localStorage whenever it changes
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      localStorage.setItem(`userPoints-${user.id}`, points.toString());
-      localStorage.setItem(`userTransactions-${user.id}`, JSON.stringify(transactions));
+
+  const refreshData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        refreshPoints(),
+        refreshTransactions(),
+        refreshPackages(),
+      ]);
+    } catch (error) {
+      console.error("Error refreshing points data:", error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [points, transactions, isAuthenticated, user]);
-  
-  const addPoints = (amount: number, type: 'purchase' | 'referral' | 'achievement', description: string) => {
+  };
+
+  const refreshPoints = async () => {
+    try {
+      const response = await pointsService.getMyPoints();
+      // Handle case where API returns undefined or unexpected structure
+      const pointsValue = response?.data?.points ?? user?.points ?? 0;
+      setPoints(pointsValue);
+
+      // Don't call updateUserData here as it causes infinite loop
+      // The points will be updated in the user context when needed
+
+      return pointsValue;
+    } catch (error) {
+      console.error("Error fetching points balance:", error);
+      // If API fails, use points from user object as fallback
+      const fallbackPoints = user?.points ?? 0;
+      setPoints(fallbackPoints);
+      return fallbackPoints;
+    }
+  };
+
+  const refreshTransactions = async () => {
+    try {
+      const response = await pointsService.getMyTransactions();
+      const transactionData = response?.data ?? [];
+      setTransactions(transactionData);
+      return transactionData;
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      return transactions;
+    }
+  };
+
+  const refreshPackages = async () => {
+    try {
+      const response = await pointsService.getPointsPackages();
+      // Handle case where API returns undefined or unexpected structure
+      const packagesData = response?.data ?? [];
+      // Only show active packages to users, but handle case where packagesData is not an array
+      const activePackages = Array.isArray(packagesData)
+        ? packagesData.filter((pkg) => pkg.active)
+        : [];
+      setPointsPackages(activePackages);
+      return packagesData;
+    } catch (error) {
+      console.error("Error fetching points packages:", error);
+      setPointsPackages([]);
+      return [];
+    }
+  };
+
+  const addPoints = async (
+    amount: number,
+    type: "purchase" | "referral" | "achievement",
+    description: string
+  ) => {
     if (!isAuthenticated || !user) {
       toast({
         title: "Trebuie să fii autentificat",
@@ -103,36 +137,34 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
       return;
     }
-    
-    const newTransaction: PointsTransaction = {
-      id: uuidv4(),
-      userId: user.id,
-      amount,
-      type,
-      description,
-      createdAt: new Date(),
-    };
-    
-    const newPoints = points + amount;
-    setPoints(newPoints);
-    
-    const newTransactions = [newTransaction, ...transactions];
-    setTransactions(newTransactions);
-    
-    // Update user data in AuthContext
-    updateUserData({
-      points: newPoints,
-      pointsHistory: newTransactions
-    });
-    
-    toast({
-      title: "Puncte adăugate",
-      description: `Ai primit ${amount} puncte: ${description}`,
-      variant: "default",
-    });
+
+    try {
+      const response = await pointsService.addPoints(amount, type, description);
+
+      // Update local state directly instead of calling refreshPoints
+      setPoints((prev) => prev + amount);
+      setTransactions((prev) => [response.data, ...prev]);
+
+      toast({
+        title: "Puncte adăugate",
+        description: `Ai primit ${amount} puncte: ${description}`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error adding points:", error);
+      toast({
+        title: "Eroare",
+        description:
+          "Nu am putut adăuga punctele. Te rugăm să încerci din nou.",
+        variant: "destructive",
+      });
+    }
   };
-  
-  const deductPoints = async (amount: number, description: string): Promise<boolean> => {
+
+  const deductPoints = async (
+    amount: number,
+    description: string
+  ): Promise<boolean> => {
     if (!isAuthenticated || !user) {
       toast({
         title: "Trebuie să fii autentificat",
@@ -141,7 +173,7 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
       return false;
     }
-    
+
     if (points < amount) {
       toast({
         title: "Puncte insuficiente",
@@ -150,105 +182,74 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
       return false;
     }
-    
-    const newTransaction: PointsTransaction = {
-      id: uuidv4(),
-      userId: user.id,
-      amount: -amount,
-      type: 'course_purchase',
-      description,
-      createdAt: new Date(),
-    };
-    
-    const newPoints = points - amount;
-    setPoints(newPoints);
-    
-    const newTransactions = [newTransaction, ...transactions];
-    setTransactions(newTransactions);
-    
-    // Update user data in AuthContext
-    updateUserData({
-      points: newPoints,
-      pointsHistory: newTransactions
-    });
-    
-    toast({
-      title: "Puncte utilizate",
-      description: `Ai folosit ${amount} puncte: ${description}`,
-      variant: "default",
-    });
-    
-    return true;
-  };
-  
-  const hasEnoughPoints = (amount: number): boolean => {
-    return (points || 0) >= (amount || 0);
-  };
-  
-  const buyPointsPackage = (packageId: string) => {
-    const pkg = pointsPackages.find(p => p.id === packageId);
-    if (!pkg) return;
-    
-    // In a real app, this would trigger a payment flow
-    // For demonstration, we'll just add the points
-    addPoints(pkg.points, 'purchase', `Pachet de ${pkg.points} puncte`);
-  };
-  
-  const completeAchievement = (achievementId: string) => {
-    if (!isAuthenticated || !user || !user.achievements) return;
-    
-    const achievementIndex = user.achievements.findIndex(a => a.id === achievementId);
-    if (achievementIndex === -1) return;
-    
-    const achievement = user.achievements[achievementIndex];
-    
-    // Skip if already completed
-    if (achievement.completed) return;
-    
-    // Mark achievement as completed
-    const updatedAchievement: Achievement = {
-      ...achievement,
-      completed: true,
-      completedAt: new Date(),
-      progress: 100
-    };
-    
-    // Update achievements array
-    const updatedAchievements = [...user.achievements];
-    updatedAchievements[achievementIndex] = updatedAchievement;
-    
-    // Update state
-    setAchievements(updatedAchievements);
-    
-    // Add points reward if applicable
-    if (updatedAchievement.pointsRewarded > 0) {
-      addPoints(
-        updatedAchievement.pointsRewarded, 
-        'achievement', 
-        `Realizare: ${updatedAchievement.name}`
+
+    try {
+      const response = await pointsService.deductPoints(
+        amount,
+        "course_purchase",
+        description
       );
-    } else {
-      // Update the user data without adding points
-      updateUserData({
-        achievements: updatedAchievements
-      });
-      
-      // Show achievement unlock notification
+
+      // Update local state directly instead of calling refreshPoints
+      setPoints((prev) => prev - amount);
+      setTransactions((prev) => [response.data, ...prev]);
+
       toast({
-        title: "Realizare deblocată!",
-        description: `${updatedAchievement.name}: ${updatedAchievement.description}`,
+        title: "Puncte utilizate",
+        description: `Ai folosit ${amount} puncte pentru: ${description}`,
         variant: "default",
       });
+
+      return true;
+    } catch (error) {
+      console.error("Error deducting points:", error);
+      toast({
+        title: "Eroare",
+        description:
+          "Nu am putut utiliza punctele. Te rugăm să încerci din nou.",
+        variant: "destructive",
+      });
+      return false;
     }
   };
-  
+
+  const hasEnoughPoints = (amount: number): boolean => {
+    return points >= amount;
+  };
+
+  const completeAchievement = (achievementId: string) => {
+    // Find achievement in the list
+    const achievement = achievements.find((a) => a.id === achievementId);
+
+    if (!achievement || achievement.completed) {
+      return;
+    }
+
+    // In a real app, you'd call an API endpoint to mark achievement as completed
+    // For demo, we'll just update local state
+    setAchievements((prev) =>
+      prev.map((a) => (a.id === achievementId ? { ...a, completed: true } : a))
+    );
+
+    // Add points
+    addPoints(
+      achievement.pointsReward,
+      "achievement",
+      `Achievement completed: ${achievement.title}`
+    );
+
+    toast({
+      title: "Realizare completată!",
+      description: `Ai obținut ${achievement.title} și ai primit ${achievement.pointsReward} puncte!`,
+      variant: "default",
+    });
+  };
+
   const formatPoints = (points: number | undefined | null): string => {
-    if (points === undefined || points === null) {
-      return '0';
-    }
-    return points.toLocaleString('ro-RO');
+    if (points === undefined || points === null) return "0";
+    return points.toLocaleString("ro-RO");
   };
-  
+
   return (
     <PointsContext.Provider
       value={{
@@ -258,9 +259,11 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addPoints,
         deductPoints,
         hasEnoughPoints,
-        buyPointsPackage,
         completeAchievement,
         formatPoints,
+        isLoading,
+        refreshPoints,
+        refreshTransactions,
       }}
     >
       {children}

@@ -59,3 +59,38 @@ export const fetchMyEnrolledCourses = async () => {
 export const deleteCourse = async (courseId: string) => {
   return apiClient.delete<{ message: string }>(`/courses/${courseId}`);
 };
+
+/**
+ * Update course status
+ */
+export const updateCourseStatus = async (courseId: string, status: 'draft' | 'published' | 'archived') => {
+  return apiClient.put(`/courses/${courseId}`, { status });
+};
+
+/**
+ * Toggle saved status for a course
+ */
+export const toggleSavedCourse = async (courseId: string) => {
+  return apiClient.post<{ saved: boolean, message: string }>(`/courses/${courseId}/save`);
+};
+
+/**
+ * Toggle liked status for a course
+ */
+export const toggleLikedCourse = async (courseId: string) => {
+  return apiClient.post<{ liked: boolean, message: string }>(`/courses/${courseId}/like`);
+};
+
+/**
+ * Get saved courses for current user
+ */
+export const fetchSavedCourses = async () => {
+  return apiClient.get<Course[]>('/courses/my/saved');
+};
+
+/**
+ * Get liked courses for current user
+ */
+export const fetchLikedCourses = async () => {
+  return apiClient.get<Course[]>('/courses/my/liked');
+};

@@ -1,158 +1,170 @@
-
-import React, { useState } from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { CheckIcon, X } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-
-// Mock data for demonstration
-const pendingTeachers = [
-  {
-    id: '1',
-    name: 'Alexandra Popescu',
-    email: 'alexandra.p@example.com',
-    avatar: 'https://ui-avatars.com/api/?name=Alexandra+Popescu&background=3f7e4e&color=fff',
-    specialization: ['Romanian', 'Literature'],
-    appliedAt: '2023-04-12T14:20:00Z',
-    status: 'pending'
-  },
-  {
-    id: '2',
-    name: 'Mihai Stanescu',
-    email: 'mihai.s@example.com',
-    avatar: 'https://ui-avatars.com/api/?name=Mihai+Stanescu&background=3f7e4e&color=fff',
-    specialization: ['Computer Science', 'Mathematics'],
-    appliedAt: '2023-04-10T09:15:00Z',
-    status: 'pending'
-  },
-  {
-    id: '3',
-    name: 'Elena Dumitrescu',
-    email: 'elena.d@example.com',
-    avatar: 'https://ui-avatars.com/api/?name=Elena+Dumitrescu&background=3f7e4e&color=fff',
-    specialization: ['Physics', 'Chemistry'],
-    appliedAt: '2023-04-08T16:30:00Z',
-    status: 'pending'
-  },
-  {
-    id: '4',
-    name: 'Andrei Ionescu',
-    email: 'andrei.i@example.com',
-    avatar: 'https://ui-avatars.com/api/?name=Andrei+Ionescu&background=3f7e4e&color=fff',
-    specialization: ['History', 'Geography'],
-    appliedAt: '2023-04-07T11:45:00Z',
-    status: 'pending'
-  },
-];
+import AdminEmptyState from "@/components/admin/AdminEmptyState";
+import AdminErrorState from "@/components/admin/AdminErrorState";
+import AdminLoadingState from "@/components/admin/AdminLoadingState";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useAdminContext } from "@/contexts/AdminContext";
+import { CheckIcon, X } from "lucide-react";
+import React, { useState } from "react";
 
 const TeacherApprovalList: React.FC = () => {
-  const { toast } = useToast();
-  const [teachers, setTeachers] = useState(pendingTeachers);
+  const {
+    pendingTeachers,
+    isLoadingTeachers,
+    teachersError,
+    approveTeacher,
+    rejectTeacher,
+    refreshTeachers,
+  } = useAdminContext();
 
-  const handleApprove = (id: string) => {
-    setTeachers(teachers.map(teacher => 
-      teacher.id === id ? { ...teacher, status: 'approved' } : teacher
-    ));
-    
-    toast({
-      title: "Profesor aprobat",
-      description: "Profesorul a fost aprobat cu succes.",
-      variant: "default",
-    });
+  const [processingIds, setProcessingIds] = useState<string[]>([]);
+
+  const handleApprove = async (id: string) => {
+    try {
+      setProcessingIds((prev) => [...prev, id]);
+      await approveTeacher(id);
+    } catch (err) {
+      console.error("Failed to approve teacher:", err);
+    } finally {
+      setProcessingIds((prev) => prev.filter((itemId) => itemId !== id));
+    }
   };
 
-  const handleReject = (id: string) => {
-    setTeachers(teachers.map(teacher => 
-      teacher.id === id ? { ...teacher, status: 'rejected' } : teacher
-    ));
-    
-    toast({
-      title: "Profesor respins",
-      description: "Profesorul a fost respins.",
-      variant: "destructive",
-    });
+  const handleReject = async (id: string) => {
+    try {
+      setProcessingIds((prev) => [...prev, id]);
+      await rejectTeacher(id, "Respins de admin");
+    } catch (err) {
+      console.error("Failed to reject teacher:", err);
+    } finally {
+      setProcessingIds((prev) => prev.filter((itemId) => itemId !== id));
+    }
   };
 
-  // Filter only pending teachers
-  const pendingTeachersList = teachers.filter(teacher => teacher.status === 'pending');
+  if (isLoadingTeachers) {
+    return <AdminLoadingState type="table" rowCount={5} columnCount={4} />;
+  }
+
+  if (teachersError) {
+    return (
+      <AdminErrorState
+        title="Eroare la încărcarea datelor"
+        message="Nu am putut încărca lista profesorilor în așteptare. Încearcă din nou."
+        error={teachersError}
+        onRetry={refreshTeachers}
+      />
+    );
+  }
+
+  if (!pendingTeachers || pendingTeachers.length === 0) {
+    return (
+      <AdminEmptyState
+        title="Nu există cereri în așteptare"
+        description="Nu există cereri de aprobare a profesorilor în așteptare."
+        showRefresh={true}
+        onRefresh={refreshTeachers}
+      />
+    );
+  }
 
   return (
     <div>
-      {pendingTeachersList.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">Nu există cereri de aprobare în așteptare</p>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Profesor</TableHead>
-              <TableHead>Specializare</TableHead>
-              <TableHead>Data cererii</TableHead>
-              <TableHead className="text-right">Acțiuni</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pendingTeachersList.map(teacher => (
-              <TableRow key={teacher.id}>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={teacher.avatar} alt={teacher.name} />
-                      <AvatarFallback>{teacher.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">{teacher.name}</div>
-                      <div className="text-sm text-muted-foreground">{teacher.email}</div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Profesor</TableHead>
+            <TableHead>Specializare</TableHead>
+            <TableHead>Data cererii</TableHead>
+            <TableHead className="text-right">Acțiuni</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pendingTeachers.map((teacher) => (
+            <TableRow key={teacher.id}>
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage
+                      src={teacher.avatar || teacher.profileImage}
+                      alt={`${teacher.firstName || ""} ${
+                        teacher.lastName || ""
+                      }`}
+                    />
+                    <AvatarFallback>
+                      {teacher.firstName?.[0] || teacher.name?.[0] || ""}
+                      {teacher.lastName?.[0] || ""}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-medium">
+                      {teacher.firstName && teacher.lastName
+                        ? `${teacher.firstName} ${teacher.lastName}`
+                        : teacher.name || "Profesor"}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {teacher.email}
                     </div>
                   </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {teacher.specialization.map(spec => (
-                      <Badge key={spec} variant="outline">{spec}</Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {new Date(teacher.appliedAt).toLocaleDateString('ro-RO')}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
-                      onClick={() => handleApprove(teacher.id)}
-                    >
-                      <CheckIcon className="h-4 w-4" />
-                      Aprobă
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleReject(teacher.id)}
-                    >
-                      <X className="h-4 w-4" />
-                      Respinge
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-1">
+                  {teacher.specialization &&
+                  teacher.specialization.length > 0 ? (
+                    teacher.specialization.map((spec) => (
+                      <Badge key={spec} variant="outline">
+                        {spec}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-sm">
+                      Nicio specializare
+                    </span>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                {new Date(
+                  teacher.appliedAt || teacher.createdAt
+                ).toLocaleDateString("ro-RO")}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                    onClick={() => handleApprove(teacher.id)}
+                    disabled={processingIds.includes(teacher.id)}
+                  >
+                    <CheckIcon className="h-4 w-4" />
+                    Aprobă
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => handleReject(teacher.id)}
+                    disabled={processingIds.includes(teacher.id)}
+                  >
+                    <X className="h-4 w-4" />
+                    Respinge
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };

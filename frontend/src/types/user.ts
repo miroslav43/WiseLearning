@@ -17,6 +17,10 @@ export interface User {
   certificates?: Certificate[] | string[];  // Allow both Certificate[] and string[]
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  
+  // Convenience getters for compatibility
+  get name(): string; // Returns firstName + lastName
+  get avatar(): string; // Returns avatarUrl
 }
 
 /**
@@ -70,7 +74,7 @@ export interface RegistrationData {
   lastName: string;
   email: string;
   password: string;
-  role: 'student' | 'teacher';
+  role: UserRole;
 }
 
 /**

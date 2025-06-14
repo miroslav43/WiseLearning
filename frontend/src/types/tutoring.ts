@@ -1,12 +1,26 @@
 /**
  * Status of a tutoring session
  */
-export type TutoringSessionStatus = 'pending' | 'approved' | 'rejected' | 'archived';
+export type TutoringSessionStatus = 'pending' | 'approved' | 'rejected' | 'archived' | 'confirmed' | 'completed' | 'cancelled';
+
+/**
+ * Location type for tutoring sessions
+ */
+export type TutoringLocationType = 'online' | 'offline' | 'both';
 
 /**
  * Status of a tutoring request
  */
 export type TutoringRequestStatus = 'pending' | 'accepted' | 'rejected' | 'completed' | 'canceled';
+
+/**
+ * Availability slot for tutoring sessions
+ */
+export interface AvailabilitySlot {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
 
 /**
  * Tutoring session model
@@ -15,23 +29,33 @@ export interface TutoringSession {
   id: string;
   teacherId: string;
   teacherName: string;
+  teacherAvatar?: string;
   subject: string;
   description: string;
   hourlyRate: number;
+  pricePerHour: number; // Alias for hourlyRate for compatibility
   currency: string;
-  availability: {
-    days: string[];
-    startTime: string;
-    endTime: string;
-  };
+  availability: AvailabilitySlot[];
   status: TutoringSessionStatus;
   location?: string;
+  locationType: TutoringLocationType; // No longer optional as it's used in components
   isOnline: boolean;
   language: string;
   maxStudents?: number;
   tags?: string[];
-  createdAt: Date | string;
-  updatedAt: Date | string;
+  rating?: number; // Added as it's used in components
+  reviews?: TutoringReview[]; // Added as it's used in components
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Preferred date for a tutoring request
+ */
+export interface PreferredDate {
+  date: string;
+  startTime: string;
+  endTime: string;
 }
 
 /**
@@ -43,18 +67,15 @@ export interface TutoringRequest {
   session?: TutoringSession;
   studentId: string;
   studentName: string;
+  studentAvatar?: string; // Added as it's used in components
   message: string;
-  preferredDates: {
-    date: Date | string;
-    startTime: string;
-    endTime: string;
-  }[];
+  preferredDates: PreferredDate[];
   status: TutoringRequestStatus;
-  confirmedDate?: Date | string;
+  confirmedDate?: string;
   confirmedStartTime?: string;
   confirmedEndTime?: string;
-  createdAt: Date | string;
-  updatedAt: Date | string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -68,7 +89,7 @@ export interface TutoringMessage {
   senderRole: 'student' | 'teacher';
   content: string;
   read: boolean;
-  createdAt: Date | string;
+  createdAt: string;
 }
 
 /**
@@ -79,7 +100,8 @@ export interface TutoringReview {
   sessionId: string;
   studentId: string;
   studentName: string;
+  studentAvatar?: string; // Added as it might be useful
   rating: number;
   comment: string;
-  createdAt: Date | string;
+  createdAt: string;
 }

@@ -1,25 +1,24 @@
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCourseContext } from "@/contexts/CourseContext";
+import { useSavedCourses } from "@/contexts/SavedCoursesContext";
+import { useToast } from "@/hooks/use-toast";
+import { Bookmark, Heart, Share } from "lucide-react";
+import React from "react";
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Share, Heart, Download, Bookmark } from 'lucide-react';
-import { Course } from '@/types/course';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { useSavedCourses } from '@/contexts/SavedCoursesContext';
-
-interface CourseActionsProps {
-  course: Course;
-}
-
-const CourseActions: React.FC<CourseActionsProps> = ({ course }) => {
+const CourseActions: React.FC = () => {
+  const { course } = useCourseContext();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
-  const { savedCourses, toggleSavedCourse, likedCourses, toggleLikedCourse } = useSavedCourses();
-  
-  const isSaved = savedCourses.some(id => id === course.id);
-  const isLiked = likedCourses.some(id => id === course.id);
+  const { savedCourses, toggleSavedCourse, likedCourses, toggleLikedCourse } =
+    useSavedCourses();
 
-  const handleSaveCourse = () => {
+  if (!course) return null;
+
+  const isSaved = savedCourses.some((id) => id === course.id);
+  const isLiked = likedCourses.some((id) => id === course.id);
+
+  const handleSaveCourse = async () => {
     if (!isAuthenticated) {
       toast({
         title: "Autentificare necesară",
@@ -28,17 +27,17 @@ const CourseActions: React.FC<CourseActionsProps> = ({ course }) => {
       });
       return;
     }
-    
-    toggleSavedCourse(course.id);
+
+    await toggleSavedCourse(course.id);
     toast({
       title: isSaved ? "Curs eliminat" : "Curs salvat",
-      description: isSaved 
-        ? `Ai eliminat cursul "${course.title}" din lista de favorite.` 
+      description: isSaved
+        ? `Ai eliminat cursul "${course.title}" din lista de favorite.`
         : `Ai salvat cursul "${course.title}" în lista de favorite.`,
     });
   };
 
-  const handleLikeCourse = () => {
+  const handleLikeCourse = async () => {
     if (!isAuthenticated) {
       toast({
         title: "Autentificare necesară",
@@ -47,12 +46,12 @@ const CourseActions: React.FC<CourseActionsProps> = ({ course }) => {
       });
       return;
     }
-    
-    toggleLikedCourse(course.id);
+
+    await toggleLikedCourse(course.id);
     toast({
       title: isLiked ? "Apreciere retrasă" : "Curs apreciat",
-      description: isLiked 
-        ? `Nu mai apreciezi cursul "${course.title}".` 
+      description: isLiked
+        ? `Nu mai apreciezi cursul "${course.title}".`
         : `Apreciezi cursul "${course.title}".`,
     });
   };
@@ -68,29 +67,37 @@ const CourseActions: React.FC<CourseActionsProps> = ({ course }) => {
 
   return (
     <div className="flex flex-wrap gap-2 justify-center w-full">
-      <Button 
-        variant="outline" 
-        size="sm" 
+      <Button
+        variant="outline"
+        size="sm"
         className="flex items-center gap-1"
         onClick={handleSaveCourse}
       >
-        <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-brand-600 text-brand-600' : ''}`} />
-        <span>{isSaved ? 'Salvat' : 'Salvează'}</span>
+        <Bookmark
+          className={`h-4 w-4 ${
+            isSaved ? "fill-brand-600 text-brand-600" : ""
+          }`}
+        />
+        <span>{isSaved ? "Salvat" : "Salvează"}</span>
       </Button>
-      
-      <Button 
-        variant="outline" 
-        size="sm" 
+
+      <Button
+        variant="outline"
+        size="sm"
         className="flex items-center gap-1"
         onClick={handleLikeCourse}
       >
-        <Heart className={`h-4 w-4 ${isLiked ? 'fill-brand-600 text-brand-600' : ''}`} />
-        <span>{isLiked ? 'Apreciat' : 'Apreciază'}</span>
+        <Heart
+          className={`h-4 w-4 ${
+            isLiked ? "fill-brand-600 text-brand-600" : ""
+          }`}
+        />
+        <span>{isLiked ? "Apreciat" : "Apreciază"}</span>
       </Button>
-      
-      <Button 
-        variant="outline" 
-        size="sm" 
+
+      <Button
+        variant="outline"
+        size="sm"
         className="flex items-center gap-1"
         onClick={handleShareCourse}
       >

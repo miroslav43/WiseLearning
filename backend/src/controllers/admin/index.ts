@@ -1,7 +1,10 @@
 // Admin Controller Index - Re-exports from all admin controller modules
 
 // Dashboard
-export { getDashboardStats } from './dashboardController';
+export {
+    getApprovalRequests, getCoursePerformanceData, getDashboardStats,
+    getUserGrowthData
+} from './dashboardController';
 
 // Course Management
 export {
@@ -11,12 +14,13 @@ export {
 
 // Tutoring Management
 export {
-    manageTutoringApprovals,
-    updateTutoringStatus
+    approveTutoringSession, manageTutoringApprovals, rejectTutoringSession, updateTutoringStatus
 } from './tutoringController';
 
 // User Management
-export { manageUsers } from './userController';
+export {
+    getPendingTeachers, manageUsers
+} from './userController';
 
 // Subscription Plans
 export {

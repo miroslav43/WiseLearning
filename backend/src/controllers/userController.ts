@@ -200,21 +200,7 @@ export const deleteUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Delete user - but first we need to cascade delete all related records
-    // This is a simplified version - in a real app you'd handle more complex dependencies
-    
-    // Delete teacher profile if exists
-    await prisma.teacherProfile.deleteMany({
-      where: { userId: id }
-    });
-    
-    // Update message senders to null
-    await prisma.tutoringMessage.updateMany({
-      where: { senderId: id },
-      data: { senderId: null as any }
-    });
-    
-    // Delete user
+    // Delete the user (this will cascade to related records)
     await prisma.user.delete({
       where: { id }
     });
@@ -234,12 +220,9 @@ export const getUserPointsTransactions = async (req: Request, res: Response) => 
     }
     
     const transactions = await prisma.pointsTransaction.findMany({
-      where: {
-        userId: req.user.id
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50 // Limit to recent 50 transactions
     });
     
     res.status(200).json(transactions);
@@ -254,46 +237,43 @@ export const getTeacherProfile = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    const teacherProfile = await prisma.teacherProfile.findUnique({
-      where: { userId: id },
+    const user = await prisma.user.findUnique({
+      where: { id },
       include: {
-        user: {
+        teacherProfile: true,
+        courses: {
+          where: { status: 'published' },
           select: {
             id: true,
-            name: true,
-            avatar: true,
-            bio: true
+            title: true,
+            subject: true,
+            students: true,
+            rating: true,
+            image: true
+          }
+        },
+        _count: {
+          select: {
+            courses: {
+              where: { status: 'published' }
+            }
           }
         }
       }
     });
     
-    if (!teacherProfile) {
-      return res.status(404).json({ message: 'Teacher profile not found' });
+    if (!user || user.role !== 'teacher') {
+      return res.status(404).json({ message: 'Teacher not found' });
     }
     
-    // Get teacher's tutoring sessions
-    const tutoringSessions = await prisma.tutoringSession.findMany({
-      where: {
-        teacherId: id,
-        status: 'approved'
-      },
-      take: 5
-    });
-    
-    // Get teacher's courses
-    const courses = await prisma.course.findMany({
-      where: {
-        teacherId: id,
-        status: 'published'
-      },
-      take: 5
-    });
-    
     res.status(200).json({
-      ...teacherProfile,
-      tutoringSessions,
-      courses
+      id: user.id,
+      name: user.name,
+      avatar: user.avatar,
+      bio: user.bio,
+      teacherProfile: user.teacherProfile,
+      courses: user.courses,
+      coursesCount: user._count.courses
     });
   } catch (error) {
     console.error('Error fetching teacher profile:', error);
@@ -308,60 +288,45 @@ export const updateTeacherProfile = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Not authenticated' });
     }
     
-    const {
-      specialization,
-      education,
-      experience,
-      certificates
-    } = req.body;
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ message: 'Only teachers can update teacher profile' });
+    }
+    
+    const { specialization, education, experience, certificates } = req.body;
+    
+    const updateData: any = {};
+    if (specialization) updateData.specialization = specialization;
+    if (education !== undefined) updateData.education = education;
+    if (experience !== undefined) updateData.experience = experience;
+    if (certificates) updateData.certificates = certificates;
     
     // Check if teacher profile exists
-    const profileExists = await prisma.teacherProfile.findUnique({
+    const existingProfile = await prisma.teacherProfile.findUnique({
       where: { userId: req.user.id }
     });
     
-    if (!profileExists) {
-      // Create profile if it doesn't exist
-      await prisma.teacherProfile.create({
+    let teacherProfile;
+    if (existingProfile) {
+      teacherProfile = await prisma.teacherProfile.update({
+        where: { userId: req.user.id },
+        data: updateData
+      });
+    } else {
+      teacherProfile = await prisma.teacherProfile.create({
         data: {
           userId: req.user.id,
           specialization: specialization || [],
-          education: education || null,
-          experience: experience || null,
+          education,
+          experience,
           certificates: certificates || [],
           students: 0
         }
       });
-    } else {
-      // Update existing profile
-      await prisma.teacherProfile.update({
-        where: { userId: req.user.id },
-        data: {
-          specialization: specialization || undefined,
-          education: education !== undefined ? education : undefined,
-          experience: experience !== undefined ? experience : undefined,
-          certificates: certificates || undefined
-        }
-      });
     }
-    
-    const updatedProfile = await prisma.teacherProfile.findUnique({
-      where: { userId: req.user.id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
-            bio: true
-          }
-        }
-      }
-    });
     
     res.status(200).json({
       message: 'Teacher profile updated successfully',
-      profile: updatedProfile
+      teacherProfile
     });
   } catch (error) {
     console.error('Error updating teacher profile:', error);
@@ -378,45 +343,36 @@ export const setUserAvailability = async (req: Request, res: Response) => {
     
     const { availability } = req.body;
     
-    if (!availability || !Array.isArray(availability)) {
-      return res.status(400).json({ message: 'Availability data is required' });
+    if (!Array.isArray(availability)) {
+      return res.status(400).json({ message: 'Availability must be an array' });
     }
     
-    // Delete existing availability slots
+    // Delete existing availability
     await prisma.userAvailability.deleteMany({
       where: { userId: req.user.id }
     });
     
-    // Create new availability slots
-    if (availability.length > 0) {
-      await Promise.all(availability.map(async (slot: any) => {
-        await prisma.userAvailability.create({
+    // Create new availability records
+    const availabilityRecords = await Promise.all(
+      availability.map((slot: any) =>
+        prisma.userAvailability.create({
           data: {
             userId: req.user.id,
             dayOfWeek: slot.dayOfWeek,
-            startTime: new Date(`1970-01-01T${slot.startTime}:00`),
-            endTime: new Date(`1970-01-01T${slot.endTime}:00`)
+            startTime: new Date(`1970-01-01T${slot.startTime}:00Z`),
+            endTime: new Date(`1970-01-01T${slot.endTime}:00Z`)
           }
-        });
-      }));
-    }
-    
-    // Get updated availability
-    const updatedAvailability = await prisma.userAvailability.findMany({
-      where: { userId: req.user.id },
-      orderBy: [
-        { dayOfWeek: 'asc' },
-        { startTime: 'asc' }
-      ]
-    });
+        })
+      )
+    );
     
     res.status(200).json({
       message: 'Availability updated successfully',
-      availability: updatedAvailability
+      availability: availabilityRecords
     });
   } catch (error) {
-    console.error('Error updating availability:', error);
-    res.status(500).json({ message: 'Error updating availability' });
+    console.error('Error setting user availability:', error);
+    res.status(500).json({ message: 'Error setting user availability' });
   }
 };
 

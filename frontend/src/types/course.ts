@@ -6,22 +6,37 @@ export interface Course {
   title: string;
   description: string;
   subject: string;
-  imageUrl?: string;
+  image?: string;
   videoUrl?: string;
   price: number;
-  currency: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  durationHours: number;
-  teacherId: string;
-  teacherName: string;
-  rating?: number;
-  reviewCount?: number;
-  status: 'draft' | 'published' | 'archived' | 'removed';
+  pointsPrice: number;
+  status: 'draft' | 'published' | 'archived' | 'rejected';
   featured?: boolean;
-  enrolledCount?: number;
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
-  lessons?: Lesson[];
+  students: number;
+  rating?: number;
+  teacherId: string;
+  createdAt: string;
+  updatedAt: string;
+  // Relations
+  teacher?: {
+    id: string;
+    name: string;
+    avatar?: string;
+    teacherProfile?: {
+      specialization: string[];
+      rating?: number;
+      students: number;
+      education?: string;
+      experience?: string;
+      certificates: string[];
+    }
+  };
+  topics?: Topic[];
+  reviews?: Review[];
+  
+  // Computed properties (frontend only)
+  teacherName?: string;
+  teacherAvatar?: string;
 }
 
 /**
@@ -32,12 +47,12 @@ export interface CourseFormData {
   title: string;
   description: string;
   subject: string;
-  imageUrl?: string;
+  image?: string;
   videoUrl?: string;
   price: number;
-  currency: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  durationHours: number;
+  pointsPrice: number;
+  status?: 'draft' | 'published' | 'archived' | 'rejected';
+  topics?: Partial<Topic>[];
 }
 
 /**
@@ -49,9 +64,13 @@ export interface Lesson {
   description?: string;
   content?: string;
   videoUrl?: string;
-  order: number;
-  durationMinutes: number;
-  courseId: string;
+  orderIndex: number;
+  duration?: number;
+  topicId: string;
+  // Relations
+  quiz?: Quiz;
+  assignment?: Assignment;
+  // Computed properties (frontend only)
   completed?: boolean;
 }
 
@@ -62,11 +81,10 @@ export interface CourseEnrollment {
   id: string;
   courseId: string;
   course?: Course;
-  studentId: string;
-  status: 'active' | 'completed' | 'paused' | 'refunded';
-  progressPercentage: number;
-  enrolledAt: Date | string;
-  completedAt?: Date | string;
+  userId: string;
+  createdAt: string;
+  completedAt?: string;
+  progress?: number;
 }
 
 export type Subject =
@@ -82,62 +100,60 @@ export type Subject =
   | 'french'
   | 'other';
 
-export type QuestionType = 'single' | 'multiple' | 'true-false' | 'order';
+export type QuestionType = 'single' | 'multiple' | 'true_false' | 'order';
 
 export interface Review {
   id: string;
   userId: string;
-  userName: string;
-  userAvatar?: string;
   courseId: string;
-  courseTitle?: string;
-  teacherName?: string;
   rating: number;
   comment: string;
-  createdAt: Date;
+  createdAt: string;
+  user?: {
+    name: string;
+    avatar?: string;
+  }
 }
 
 export interface Question {
   id: string;
-  questionText: string;
+  text: string;
   type: QuestionType;
   options: string[];
-  correctOptions: number[];
-  order?: number;
+  correctAnswers: number[];
+  orderIndex: number;
+  points: number;
+  quizId: string;
 }
 
 export interface Quiz {
   id: string;
   title: string;
-  description: string;
-  questions: Question[];
+  description?: string;
   timeLimit?: number; // in minutes
-}
-
-export interface UnitTest {
-  id: string;
-  name: string;
-  testCode: string;
-  expectedOutput?: string;
+  lessonId: string;
+  questions: Question[];
 }
 
 export interface Assignment {
   id: string;
   title: string;
   description: string;
-  dueDate?: Date;
-  maxScore: number;
-  allowFileUpload: boolean;
+  dueDate?: string;
+  maxPoints: number;
+  lessonId: string;
+  allowAttachments: boolean;
   allowedFileTypes?: string[];
-  unitTests?: UnitTest[]; // New field for Computer Science assignments
 }
 
-export type ContentType = 'lesson' | 'quiz' | 'assignment';
+export type LessonType = 'lesson' | 'quiz' | 'assignment';
 
 export interface Topic {
   id: string;
   title: string;
-  description: string;
+  description?: string;
+  orderIndex: number;
+  courseId: string;
+  // Relations
   lessons: Lesson[];
-  order: number;
 }

@@ -74,7 +74,7 @@ export const register = async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: user.id },
       process.env.JWT_SECRET as string,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' } as jwt.SignOptions
     );
     
     // If the role is teacher, create a teacher profile
@@ -140,7 +140,7 @@ export const login = async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: user.id },
       process.env.JWT_SECRET as string,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' } as jwt.SignOptions
     );
     
     // Update last login time
@@ -219,4 +219,69 @@ const generateReferralCode = (name: string): string => {
   const namePart = name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 5).toUpperCase();
   const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
   return `${namePart}${randomPart}`;
+};
+
+// Update user profile
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const userId = req.user.id;
+    const { name, bio, avatar, points } = req.body;
+    
+    // Validate input - now also accepts points
+    if (!name && bio === undefined && avatar === undefined && points === undefined) {
+      return res.status(400).json({ message: 'Please provide at least one field to update' });
+    }
+    
+    // Prepare update data
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (bio !== undefined) updateData.bio = bio;
+    if (avatar !== undefined) updateData.avatar = avatar;
+    if (points !== undefined) updateData.points = points;
+    
+    // Update user
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatar: true,
+        bio: true,
+        points: true,
+        referralCode: true,
+        createdAt: true
+      }
+    });
+    
+    // Update teacher profile if needed and if user is a teacher
+    if (req.user.role === 'teacher' && req.body.teacherProfile) {
+      const { specialization, education, experience, certificates } = req.body.teacherProfile;
+      
+      const teacherUpdateData: any = {};
+      if (specialization) teacherUpdateData.specialization = specialization;
+      if (education !== undefined) teacherUpdateData.education = education;
+      if (experience !== undefined) teacherUpdateData.experience = experience;
+      if (certificates) teacherUpdateData.certificates = certificates;
+      
+      await prisma.teacherProfile.update({
+        where: { userId },
+        data: teacherUpdateData
+      });
+    }
+    
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Error updating profile. Please try again later.' });
+  }
 }; 

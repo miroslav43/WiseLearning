@@ -1,36 +1,25 @@
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
-import { 
-  Calendar, 
-  Medal, 
-  BookOpen, 
-  Star, 
-  Clock, 
-  Users, 
-  Check,
-  Edit
-} from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import TutoringSessionCard from '@/components/tutoring/TutoringSessionCard';
-import TutoringReviews from '@/components/tutoring/TutoringReviews';
-import { useTutoringService } from '@/services/tutoringService';
-import { TutoringSession } from '@/types/tutoring';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import TutoringReviews from "@/components/tutoring/TutoringReviews";
+import TutoringSessionCard from "@/components/tutoring/TutoringSessionCard";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useTutoringService } from "@/services/tutoringService";
+import { TutoringSession } from "@/types/tutoring";
+import { BookOpen, Check, Clock, Edit, Medal, Star, Users } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const TeacherProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -42,82 +31,120 @@ const TeacherProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  
+
   useEffect(() => {
     // Guard against non-teachers accessing this page
-    if (user && user.role !== 'teacher') {
-      navigate('/');
+    if (user && user.role !== "teacher") {
+      navigate("/");
       toast({
         title: "Acces restricționat",
         description: "Această pagină este disponibilă doar pentru profesori.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    
-    const fetchTeacherProfile = () => {
-      // In a real app, this would be an API call to get teacher data
-      if (user && user.role === 'teacher') {
-        // If viewing own profile
-        setTeacher({
+
+    const fetchTeacherProfile = async () => {
+      try {
+        setLoading(true);
+
+        if (!user || !user.id) {
+          navigate("/auth/login");
+          return;
+        }
+
+        // For teacher viewing their own profile
+        const teacherData = {
           id: user.id,
           name: user.name,
+          email: user.email,
           avatar: user.avatar,
-          bio: user.bio || "Profesor dedicat cu experiență vastă în predarea materiilor. Specializat în a ajuta elevii să atingă excelența academică prin metode de predare adaptate fiecărui student.",
-          specializations: user.role === 'teacher' ? (user as any).specialization || ["Matematică"] : ["Matematică"],
-          experience: "10+ ani experiență în educație",
-          education: "Universitatea București, Facultatea de Matematică și Informatică",
-          reviewCount: 87,
-          rating: user.role === 'teacher' ? (user as any).rating || 4.8 : 4.8,
-          completedSessions: 124,
-          students: user.role === 'teacher' ? (user as any).students || 45 : 45,
-          schedule: [
-            { day: "Luni", hours: "14:00 - 20:00" },
-            { day: "Marți", hours: "14:00 - 20:00" },
-            { day: "Miercuri", hours: "16:00 - 21:00" },
-            { day: "Joi", hours: "14:00 - 20:00" },
-            { day: "Vineri", hours: "15:00 - 19:00" },
+          bio:
+            user.bio ||
+            "Profesor pasionat de predare și împărtășire de cunoștințe.",
+          rating: user.teacherProfile?.rating || 4.8,
+          reviewCount: 24,
+          experience:
+            user.teacherProfile?.experience || "5+ ani experiență în predare",
+          education:
+            user.teacherProfile?.education ||
+            "Licențiat în domeniul de specializare",
+          students: user.teacherProfile?.students || 127,
+          completedSessions: 89,
+          specializations: user.teacherProfile?.specialization || [
+            "Informatică",
+            "Matematică",
+            "Algoritmi",
           ],
-          certificates: [
-            "Diplomă de Excelență în Educație",
-            "Certificat de Metodologie Didactică",
-          ]
+          certificates: user.teacherProfile?.certificates || [
+            "Certificat de competențe digitale",
+            "Atestat de profesor",
+            "Certificat metodici moderne de predare",
+          ],
+          schedule: [
+            { day: "Luni", hours: "14:00 - 18:00" },
+            { day: "Marți", hours: "16:00 - 20:00" },
+            { day: "Miercuri", hours: "14:00 - 18:00" },
+            { day: "Joi", hours: "16:00 - 20:00" },
+            { day: "Vineri", hours: "14:00 - 18:00" },
+          ],
+        };
+
+        setTeacher(teacherData);
+
+        toast({
+          title: "Profil încărcat",
+          description: "Datele profilului au fost încărcate cu succes.",
+          variant: "default",
         });
-        
+
         setIsOwnProfile(true);
-        
-        // Get teacher sessions
-        const allSessions = tutoringService.getApprovedTutoringSessions();
-        const teacherSessions = allSessions.filter(session => session.teacherId === user.id);
+
+        // Get teacher sessions with await
+        const allSessions = await tutoringService.getApprovedTutoringSessions();
+        const teacherSessions = allSessions.filter(
+          (session) => session.teacherId === user.id
+        );
         setSessions(teacherSessions);
+      } catch (error) {
+        console.error("Failed to fetch teacher profile:", error);
+        toast({
+          title: "Eroare",
+          description: "Nu am putut încărca profilul profesorului.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
-    
+
     fetchTeacherProfile();
   }, [user, tutoringService, navigate, toast, refreshKey]);
-  
+
   const handleRefreshReviews = () => {
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
   };
-  
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-12">
         <div className="flex justify-center items-center h-64">
-          <div className="animate-pulse text-xl text-muted-foreground">Se încarcă profilul profesorului...</div>
+          <div className="animate-pulse text-xl text-muted-foreground">
+            Se încarcă profilul profesorului...
+          </div>
         </div>
       </div>
     );
   }
-  
+
   if (!teacher) {
     return (
       <div className="container mx-auto px-4 py-12">
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold mb-4">Profil negăsit</h1>
-          <p className="text-muted-foreground mb-6">Profilul căutat nu a fost găsit sau nu mai este activ.</p>
+          <p className="text-muted-foreground mb-6">
+            Profilul căutat nu a fost găsit sau nu mai este activ.
+          </p>
           <Button asChild>
             <Link to="/dashboard/teacher">Înapoi la dashboard</Link>
           </Button>
@@ -125,42 +152,45 @@ const TeacherProfilePage: React.FC = () => {
       </div>
     );
   }
-  
+
   // Get reviews for this teacher (in a real app, this would come from an API)
   // For now, we'll create mock reviews data
   const reviews = [
     {
-      id: '1',
-      sessionId: 'session1',
-      studentId: 'student1',
-      studentName: 'Elev 1',
+      id: "1",
+      sessionId: "session1",
+      studentId: "student1",
+      studentName: "Elev 1",
       teacherName: teacher.name,
       rating: 5,
-      comment: "Un profesor excelent care explică foarte clar. Am înțeles mult mai bine materia și am reușit să-mi îmbunătățesc rezultatele.",
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 1 week ago
+      comment:
+        "Un profesor excelent care explică foarte clar. Am înțeles mult mai bine materia și am reușit să-mi îmbunătățesc rezultatele.",
+      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
     },
     {
-      id: '2',
-      sessionId: 'session2',
-      studentId: 'student2',
-      studentName: 'Elev 2',
+      id: "2",
+      sessionId: "session2",
+      studentId: "student2",
+      studentName: "Elev 2",
       teacherName: teacher.name,
       rating: 4.5,
-      comment: "Metoda de predare este extraordinară. Recomand cu încredere oricui are nevoie de ajutor în înțelegerea acestui subiect.",
-      createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) // 2 weeks ago
+      comment:
+        "Metoda de predare este extraordinară. Recomand cu încredere oricui are nevoie de ajutor în înțelegerea acestui subiect.",
+      createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 2 weeks ago
     },
     {
-      id: '3',
-      sessionId: 'session3',
-      studentId: 'student3',
-      studentName: 'Elev 3',
+      id: "3",
+      sessionId: "session3",
+      studentId: "student3",
+      studentName: "Elev 3",
       teacherName: teacher.name,
       rating: 4,
-      comment: "Sesiunile au fost foarte productive și bine structurate. Profesorul are multă răbdare și explică până când înțelegi perfect.",
-      createdAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000) // 3 weeks ago
-    }
+      comment:
+        "Sesiunile au fost foarte productive și bine structurate. Profesorul are multă răbdare și explică până când înțelegi perfect.",
+      createdAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000), // 3 weeks ago
+    },
   ];
-  
+
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -171,7 +201,11 @@ const TeacherProfilePage: React.FC = () => {
               <Avatar className="w-24 h-24 mx-auto mb-4 ring-4 ring-brand-100">
                 <AvatarImage src={teacher.avatar} alt={teacher.name} />
                 <AvatarFallback className="text-2xl bg-brand-500 text-white">
-                  {teacher.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                  {teacher.name
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join("")
+                    .toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <CardTitle className="text-2xl">{teacher.name}</CardTitle>
@@ -179,11 +213,13 @@ const TeacherProfilePage: React.FC = () => {
                 <div className="flex items-center justify-center gap-1 text-amber-500">
                   <Star className="fill-amber-500 h-4 w-4" />
                   <span className="font-semibold">{teacher.rating}</span>
-                  <span className="text-gray-500">({teacher.reviewCount} recenzii)</span>
+                  <span className="text-gray-500">
+                    ({teacher.reviewCount} recenzii)
+                  </span>
                 </div>
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent className="space-y-4">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
@@ -196,29 +232,39 @@ const TeacherProfilePage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-brand-600" />
-                  <span className="text-sm">{teacher.students} elevi ajutați</span>
+                  <span className="text-sm">
+                    {teacher.students} elevi ajutați
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-brand-600" />
-                  <span className="text-sm">{teacher.completedSessions} sesiuni finalizate</span>
+                  <span className="text-sm">
+                    {teacher.completedSessions} sesiuni finalizate
+                  </span>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div>
                 <h3 className="font-medium mb-2">Specializări</h3>
                 <div className="flex flex-wrap gap-1">
-                  {teacher.specializations.map((spec: string, index: number) => (
-                    <Badge key={index} variant="secondary" className="bg-brand-100 text-brand-700 border-brand-200">
-                      {spec}
-                    </Badge>
-                  ))}
+                  {teacher.specializations.map(
+                    (spec: string, index: number) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="bg-brand-100 text-brand-700 border-brand-200"
+                      >
+                        {spec}
+                      </Badge>
+                    )
+                  )}
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div>
                 <h3 className="font-medium mb-2">Program disponibil</h3>
                 <div className="text-sm space-y-1">
@@ -230,9 +276,9 @@ const TeacherProfilePage: React.FC = () => {
                   ))}
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div>
                 <h3 className="font-medium mb-2">Certificări</h3>
                 <div className="space-y-1">
@@ -245,12 +291,12 @@ const TeacherProfilePage: React.FC = () => {
                 </div>
               </div>
             </CardContent>
-            
+
             <CardFooter>
               {isOwnProfile && (
-                <Button 
-                  className="w-full flex items-center gap-2" 
-                  onClick={() => navigate('/teacher/profile/edit')}
+                <Button
+                  className="w-full flex items-center gap-2"
+                  onClick={() => navigate("/teacher/profile/edit")}
                 >
                   <Edit className="h-4 w-4" />
                   Editează profilul
@@ -259,7 +305,7 @@ const TeacherProfilePage: React.FC = () => {
             </CardFooter>
           </Card>
         </div>
-        
+
         {/* Teacher Main Content */}
         <div className="lg:col-span-2">
           <Tabs defaultValue="about" className="w-full">
@@ -268,7 +314,7 @@ const TeacherProfilePage: React.FC = () => {
               <TabsTrigger value="sessions">Sesiuni</TabsTrigger>
               <TabsTrigger value="reviews">Recenzii</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="about" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -280,7 +326,7 @@ const TeacherProfilePage: React.FC = () => {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>Abordare educațională</CardTitle>
@@ -288,50 +334,65 @@ const TeacherProfilePage: React.FC = () => {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
-                      <h3 className="font-medium text-lg mb-2 text-brand-600">Metodologie personalizată</h3>
+                      <h3 className="font-medium text-lg mb-2 text-brand-600">
+                        Metodologie personalizată
+                      </h3>
                       <p className="text-sm text-gray-700 dark:text-gray-300">
-                        Adaptez metoda de predare la stilul de învățare al fiecărui elev, folosind exemple practice și exerciții interactive.
+                        Adaptez metoda de predare la stilul de învățare al
+                        fiecărui elev, folosind exemple practice și exerciții
+                        interactive.
                       </p>
                     </div>
-                    
+
                     <div className="p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
-                      <h3 className="font-medium text-lg mb-2 text-brand-600">Accent pe înțelegere profundă</h3>
+                      <h3 className="font-medium text-lg mb-2 text-brand-600">
+                        Accent pe înțelegere profundă
+                      </h3>
                       <p className="text-sm text-gray-700 dark:text-gray-300">
-                        Nu mă concentrez doar pe memorare, ci pe înțelegerea conceptelor și aplicarea lor în situații reale.
+                        Nu mă concentrez doar pe memorare, ci pe înțelegerea
+                        conceptelor și aplicarea lor în situații reale.
                       </p>
                     </div>
-                    
+
                     <div className="p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
-                      <h3 className="font-medium text-lg mb-2 text-brand-600">Feedback constant</h3>
+                      <h3 className="font-medium text-lg mb-2 text-brand-600">
+                        Feedback constant
+                      </h3>
                       <p className="text-sm text-gray-700 dark:text-gray-300">
-                        Ofer feedback detaliat după fiecare sesiune și urmăresc progresul elevului pentru a adapta planul educațional.
+                        Ofer feedback detaliat după fiecare sesiune și urmăresc
+                        progresul elevului pentru a adapta planul educațional.
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="sessions" className="space-y-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Sesiuni disponibile</h2>
                 {isOwnProfile && (
-                  <Button onClick={() => navigate('/teacher/tutoring/create')} className="bg-brand-500 hover:bg-brand-600">
+                  <Button
+                    onClick={() => navigate("/teacher/tutoring/create")}
+                    className="bg-brand-500 hover:bg-brand-600"
+                  >
                     Adaugă anunț nou
                   </Button>
                 )}
               </div>
-              
+
               {sessions.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {sessions.map(session => (
-                    <TutoringSessionCard 
-                      key={session.id} 
+                  {sessions.map((session) => (
+                    <TutoringSessionCard
+                      key={session.id}
                       session={session}
                       showDetails={true}
-                      onSelect={() => isOwnProfile 
-                        ? navigate(`/my-tutoring/manage/${session.id}`) 
-                        : window.location.href = `/tutoring?session=${session.id}`}
+                      onSelect={() =>
+                        isOwnProfile
+                          ? navigate(`/my-tutoring/manage/${session.id}`)
+                          : (window.location.href = `/tutoring?session=${session.id}`)
+                      }
                     />
                   ))}
                 </div>
@@ -339,13 +400,13 @@ const TeacherProfilePage: React.FC = () => {
                 <Card>
                   <CardContent className="text-center py-12">
                     <p className="text-muted-foreground">
-                      {isOwnProfile 
-                        ? "Nu ai niciun anunț de meditații momentan. Adaugă primul tău anunț!" 
+                      {isOwnProfile
+                        ? "Nu ai niciun anunț de meditații momentan. Adaugă primul tău anunț!"
                         : "Acest profesor nu are sesiuni disponibile momentan."}
                     </p>
                     {isOwnProfile && (
-                      <Button 
-                        onClick={() => navigate('/teacher/tutoring/create')} 
+                      <Button
+                        onClick={() => navigate("/teacher/tutoring/create")}
                         className="mt-4 bg-brand-500 hover:bg-brand-600"
                       >
                         Adaugă primul anunț
@@ -355,12 +416,14 @@ const TeacherProfilePage: React.FC = () => {
                 </Card>
               )}
             </TabsContent>
-            
+
             <TabsContent value="reviews" className="space-y-6">
-              <h2 className="text-xl font-semibold mb-4">Recenzii de la elevi</h2>
-              
-              <TutoringReviews 
-                sessionId={'teacher_' + teacher.id}
+              <h2 className="text-xl font-semibold mb-4">
+                Recenzii de la elevi
+              </h2>
+
+              <TutoringReviews
+                sessionId={"teacher_" + teacher.id}
                 teacherName={teacher.name}
                 rating={teacher.rating}
                 reviews={reviews}
